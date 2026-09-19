@@ -1,0 +1,21 @@
+name: Validate marketplace
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  marketplace-json:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate marketplace JSON
+        run: python -m json.tool marketplace.json > /dev/null
+      - name: Validate plugin manifests
+        shell: bash
+        run: |
+          shopt -s nullglob
+          for manifest in plugins/*/.codex-plugin/plugin.json; do
+            python -m json.tool "$manifest" > /dev/null
+          done
