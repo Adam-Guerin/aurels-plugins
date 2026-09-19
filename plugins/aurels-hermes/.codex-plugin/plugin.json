@@ -1,0 +1,19 @@
+{
+  "name": "aurels-hermes",
+  "version": "0.1.0",
+  "description": "Aurels integration for Hermes.",
+  "author": {
+    "name": "Aurels"
+  },
+  "license": "MIT",
+  "keywords": ["aurels", "hermes"],
+  "interface": {
+    "displayName": "Aurels for Hermes",
+    "shortDescription": "Use Aurels with Hermes.",
+    "longDescription": "Connect Aurels capabilities to Hermes workflows.",
+    "developerName": "Aurels",
+    "category": "Productivity",
+    "capabilities": ["Interactive"],
+    "defaultPrompt": ["Set up Aurels for my Hermes workflow."]
+  }
+}

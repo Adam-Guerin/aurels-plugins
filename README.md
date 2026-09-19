@@ -1,25 +1,21 @@
-# Codex Plugin Marketplace
+# Aurels Plugins
 
-An open-source collection of plugins for Codex. Each plugin lives in its own directory under `plugins/` and can provide skills, MCP servers, apps, hooks, scripts, or assets.
+Open-source plugins maintained by Aurels for the OpenClaw and Hermes ecosystems.
 
-## Install this marketplace
+## Available plugins
 
-Clone this repository, then add its marketplace definition in Codex:
+- **Aurels for OpenClaw** — integration package for OpenClaw.
+- **Aurels for Hermes** — integration package for Hermes.
 
-```powershell
-codex plugin marketplace add C:\path\to\codex-plugin-marketplace
+Each plugin is self-contained in `plugins/`, with its manifest and its own usage documentation.
+
+## Repository layout
+
+```text
+plugins/
+  aurels-openclaw/
+  aurels-hermes/
 ```
-
-Install any listed plugin from the Codex Plugins view.
-
-## Add a plugin
-
-1. Create `plugins/<plugin-name>/`.
-2. Add a valid `plugins/<plugin-name>/.codex-plugin/plugin.json`.
-3. Add the plugin to `marketplace.json`.
-4. Run the validation workflow locally or in a pull request.
-
-Use short, hyphenated names, keep each plugin self-contained, and document any setup it needs.
 
 ## Contributing
 

@@ -1,6 +1,6 @@
-# Contributing
+# Contributing to Aurels Plugins
 
-Thanks for improving the marketplace.
+Thanks for improving Aurels' OpenClaw and Hermes plugins.
 
 ## Plugin requirements
 

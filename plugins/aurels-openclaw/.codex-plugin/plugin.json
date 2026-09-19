@@ -1,0 +1,19 @@
+{
+  "name": "aurels-openclaw",
+  "version": "0.1.0",
+  "description": "Aurels integration for OpenClaw.",
+  "author": {
+    "name": "Aurels"
+  },
+  "license": "MIT",
+  "keywords": ["aurels", "openclaw"],
+  "interface": {
+    "displayName": "Aurels for OpenClaw",
+    "shortDescription": "Use Aurels with OpenClaw.",
+    "longDescription": "Connect Aurels capabilities to OpenClaw workflows.",
+    "developerName": "Aurels",
+    "category": "Productivity",
+    "capabilities": ["Interactive"],
+    "defaultPrompt": ["Set up Aurels for my OpenClaw workflow."]
+  }
+}
