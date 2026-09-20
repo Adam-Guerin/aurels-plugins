@@ -11,6 +11,7 @@ export function loadConfig(raw = {}) {
     enabled: cfg.enabled ?? env.AURELS_ENABLED !== "false",
     apiUrl: normalizeUrl(String(cfg.apiUrl ?? env.AURELS_API_URL ?? "https://www.aurels.dev")),
     apiKey: String(cfg.apiKey ?? env.AURELS_API_KEY ?? ""),
+    mode: cfg.mode ?? env.AURELS_MODE ?? (String(cfg.apiKey ?? env.AURELS_API_KEY ?? "") ? "remote" : "local"),
     failMode: cfg.failMode ?? env.AURELS_FAIL_MODE ?? "closed",
     failOpenPrivilegedActions: cfg.failOpenPrivilegedActions ?? env.AURELS_FAIL_OPEN_PRIVILEGED_ACTIONS ?? "block",
     timeoutMs: Number.isFinite(timeoutMs) ? Math.min(Math.max(timeoutMs, 100), 30000) : 1500,
@@ -58,7 +59,7 @@ export function createHandlers(config, client) {
       if (!config.enabled || String(event.toolName || "").startsWith("aurels.")) return undefined;
       const action = { version: "1", integration: "openclaw", action: { id: event.toolCallId || crypto.randomUUID(), name: event.toolName, arguments: event.params ?? {} }, agent: { id: context.agentId, sessionId: context.sessionId, runId: context.runId }, timestamp: new Date().toISOString() };
       try {
-        const decision = validateDecision(await client.evaluate(action));
+        const decision = config.mode === "local" ? localDecision(event) : validateDecision(await client.evaluate(action));
         traceByCall.set(action.action.id, decision.traceId);
         if (decision.decision === "allow") return undefined;
         if (decision.decision === "rewrite" && event.supportsParamRewrite && decision.rewrittenArguments && typeof decision.rewrittenArguments === "object") return { params: decision.rewrittenArguments };
@@ -106,4 +107,12 @@ function validateDecision(value) {
   if (value.ruleIds !== undefined && (!Array.isArray(value.ruleIds) || value.ruleIds.some((id) => typeof id !== "string"))) throw new Error("Invalid Aurels rule IDs");
   if (value.decision === "rewrite" && (!value.rewrittenArguments || typeof value.rewrittenArguments !== "object" || Array.isArray(value.rewrittenArguments))) throw new Error("Invalid Aurels rewrite");
   return value;
+}
+
+function localDecision(event) {
+  const name = String(event.toolName ?? "").toLowerCase();
+  const command = String(event.params?.command ?? event.params?.script ?? "").toLowerCase();
+  if (/(rm\s+-[^\n]*r|del\s+\/|format\s|drop\s+table|curl[^\n]*\|\s*(sh|bash)|chmod\s+777)/.test(command)) return { decision: "block" };
+  if (/^(read|list|get|search|inspect|status)[._:-]/.test(name) || /read_file|list_files|status/.test(name)) return { decision: "allow" };
+  return { decision: "flag" };
 }

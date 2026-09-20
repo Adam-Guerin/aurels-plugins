@@ -1,6 +1,6 @@
 # Aurels for OpenClaw
 
-`@aurels/openclaw-plugin` is a standalone Node.js plugin that intercepts OpenClaw tool calls before execution. It calls the Aurels action-evaluation API directly; it does not expose an agent-visible security tool.
+`@aurels/openclaw-plugin` is a standalone Node.js plugin that intercepts OpenClaw tool calls before execution. With no API key, it runs an offline deterministic policy and makes no network request. A key optionally enables remote Aurels evaluation.
 
 ## Support contract
 
@@ -31,6 +31,8 @@ AURELS_FAIL_MODE=closed
 AURELS_TIMEOUT_MS=1500
 AURELS_TELEMETRY_ENABLED=true
 ```
+
+Leave `AURELS_API_KEY` empty and set `AURELS_MODE=local` for offline use. Local mode allows read-only actions, blocks clearly destructive command patterns, and holds every other action for approval. It is intentionally conservative and does not provide semantic analysis.
 
 ## Decision and outage contract
 

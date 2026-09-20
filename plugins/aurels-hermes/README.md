@@ -1,6 +1,6 @@
 # Aurels for Hermes
 
-`aurels-hermes` is a standalone Python 3.11+ native Hermes guard. At startup it registers `pre_tool_call` and `post_tool_call`; a host missing either declared hook fails startup rather than silently running without protection.
+`aurels-hermes` is a standalone Python 3.11+ native Hermes guard. At startup it registers `pre_tool_call` and `post_tool_call`; a host missing either declared hook fails startup rather than silently running without protection. With no API key, it runs an offline deterministic policy and makes no network request.
 
 ## Support contract
 
@@ -52,6 +52,8 @@ AURELS_TELEMETRY_ENABLED=true
 ```
 
 You can instead pass a mapping to `AurelsHermesPlugin`, for example `{"api_key": runtime_secret, "fail_mode": "closed"}`. Runtime mapping values take precedence over the environment.
+
+For fully offline use, leave `AURELS_API_KEY` empty. Local mode allows read-only actions, blocks clearly destructive command patterns, and returns approval-required for every other action. It is deliberately conservative and is not semantic analysis.
 
 ## Decision and outage contract
 

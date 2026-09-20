@@ -34,7 +34,7 @@ class AurelsHermesPlugin:
         action_id = context.get("action_id") or str(uuid4())
         request = {"version": "1", "integration": "hermes", "action": {"id": action_id, "name": action_name, "arguments": arguments or {}}, "agent": {"id": context.get("agent_id"), "sessionId": context.get("session_id")}, "timestamp": self._now()}
         try:
-            decision = self.client.evaluate(request)
+            decision = self._local_decision(action_name, arguments or {}) if not self.config.api_key else self.client.evaluate(request)
             outcome = decision.get("decision") if isinstance(decision, dict) else None
             if outcome not in {"allow", "flag", "block", "quarantine", "rewrite"} or ("riskScore" in decision and (not isinstance(decision["riskScore"], (int, float)) or isinstance(decision["riskScore"], bool) or not 0 <= decision["riskScore"] <= 100)):
                 raise RuntimeError("Malformed Aurels decision")
@@ -67,3 +67,13 @@ class AurelsHermesPlugin:
     def _privileged(name):
         value = str(name).lower()
         return any(token in value for token in ("write", "remove", "delete", "exec", "shell", "terminal", "network", "browser", "email", "database", "cloud", "install", "auth", "credential"))
+
+    @staticmethod
+    def _local_decision(action_name, arguments):
+        name = str(action_name).lower()
+        command = str(arguments.get("command", arguments.get("script", ""))).lower() if isinstance(arguments, dict) else ""
+        if any(pattern in command for pattern in ("rm -rf", "del /", "format ", "drop table", "| sh", "| bash", "chmod 777")):
+            return {"decision": "block"}
+        if name.startswith(("read", "list", "get", "search", "inspect", "status")) or name in {"read_file", "list_files"}:
+            return {"decision": "allow"}
+        return {"decision": "flag"}

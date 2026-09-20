@@ -47,5 +47,11 @@ class PluginTests(unittest.TestCase):
         preflight = plugin.before_action("filesystem.writeFile")
         if preflight["allow"]: calls.append("executed")
         self.assertEqual(calls, [])
+    def test_local_mode_allows_benign_reads_without_a_key(self):
+        plugin = AurelsHermesPlugin({"api_key": "", "telemetry_enabled": False}, Client(error=True))
+        self.assertTrue(plugin.before_action("read_file", {"path": "README.md"})["allow"])
+    def test_local_mode_blocks_destructive_commands_without_a_key(self):
+        plugin = AurelsHermesPlugin({"api_key": "", "telemetry_enabled": False}, Client(error=True))
+        self.assertFalse(plugin.before_action("exec", {"command": "rm -rf /"})["allow"])
 
 if __name__ == "__main__": unittest.main()

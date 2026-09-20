@@ -42,3 +42,11 @@ test("adapter conformance: an outage never reaches a privileged handler", async 
   if (!preflight?.block) calls += 1;
   assert.equal(calls, 0);
 });
+test("local mode permits a benign read without an API key", async () => {
+  const handlers = createHandlers(loadConfig({ apiKey: "", telemetry: false }), { evaluate: async () => { throw new Error("network must not be used"); } });
+  assert.equal(await handlers.beforeToolCall({ toolName: "read_file", params: { path: "README.md" } }), undefined);
+});
+test("local mode blocks destructive commands without an API key", async () => {
+  const handlers = createHandlers(loadConfig({ apiKey: "", telemetry: false }), { evaluate: async () => { throw new Error("network must not be used"); } });
+  assert.equal((await handlers.beforeToolCall({ toolName: "exec", params: { command: "rm -rf /" } }))?.block, true);
+});
