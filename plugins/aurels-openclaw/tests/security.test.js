@@ -26,3 +26,19 @@ test("fails closed on malformed allow decisions and safely redacts cycles", asyn
   const handlers = createHandlers(config, { evaluate: async () => ({ decision: "allow", riskScore: 101 }) });
   assert.equal((await handlers.beforeToolCall({ toolName: "exec" }))?.block, true);
 });
+test("adapter conformance: only allow reaches the simulated tool handler", async () => {
+  for (const [decision, expectedCalls] of [["allow", 1], ["flag", 0], ["block", 0]]) {
+    let calls = 0;
+    const handlers = createHandlers(config, { evaluate: async () => ({ decision }), telemetry: async () => {} });
+    const preflight = await handlers.beforeToolCall({ toolName: "send_email", toolCallId: `conformance-${decision}` });
+    if (!preflight?.block) calls += 1;
+    assert.equal(calls, expectedCalls, `${decision} must execute ${expectedCalls} time(s)`);
+  }
+});
+test("adapter conformance: an outage never reaches a privileged handler", async () => {
+  let calls = 0;
+  const handlers = createHandlers({ ...config, failMode: "open" }, { evaluate: async () => { throw new Error("offline"); } });
+  const preflight = await handlers.beforeToolCall({ toolName: "filesystem.writeFile" });
+  if (!preflight?.block) calls += 1;
+  assert.equal(calls, 0);
+});

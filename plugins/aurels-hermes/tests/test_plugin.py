@@ -34,5 +34,18 @@ class PluginTests(unittest.TestCase):
         self.assertFalse(AurelsHermesPlugin({"api_key": "test", "fail_mode": "open"}, Client(error=True)).before_action("filesystem.writeFile")["allow"])
     def test_malformed_metadata_fails_closed(self):
         self.assertFalse(AurelsHermesPlugin({"api_key": "test"}, Client({"decision": "allow", "riskScore": "bad"})).before_action("exec")["allow"])
+    def test_adapter_conformance_only_allow_executes_handler(self):
+        for decision, expected_calls in (("allow", 1), ("flag", 0), ("block", 0)):
+            calls = []
+            plugin = AurelsHermesPlugin({"api_key": "test"}, Client({"decision": decision}))
+            preflight = plugin.before_action("send_email")
+            if preflight["allow"]: calls.append("executed")
+            self.assertEqual(len(calls), expected_calls, decision)
+    def test_adapter_conformance_privileged_outage_does_not_execute(self):
+        calls = []
+        plugin = AurelsHermesPlugin({"api_key": "test", "fail_mode": "open"}, Client(error=True))
+        preflight = plugin.before_action("filesystem.writeFile")
+        if preflight["allow"]: calls.append("executed")
+        self.assertEqual(calls, [])
 
 if __name__ == "__main__": unittest.main()
