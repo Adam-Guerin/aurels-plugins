@@ -50,3 +50,28 @@ test("local mode blocks destructive commands without an API key", async () => {
   const handlers = createHandlers(loadConfig({ apiKey: "", telemetry: false }), { evaluate: async () => { throw new Error("network must not be used"); } });
   assert.equal((await handlers.beforeToolCall({ toolName: "exec", params: { command: "rm -rf /" } }))?.block, true);
 });
+test("local deterministic blocks take priority over a model allow", async () => {
+  let evaluations = 0;
+  const handlers = createHandlers(config, { evaluate: async () => { evaluations += 1; return { decision: "allow" }; }, telemetry: async () => {} });
+  const result = await handlers.beforeToolCall({ toolName: "exec", params: { command: "rm -rf /" } });
+  assert.equal(result?.block, true);
+  assert.equal(evaluations, 0);
+});
+test("only an ambiguous action reaches the model and accepts its strict decisions", async () => {
+  let evaluations = 0;
+  const handlers = createHandlers(config, { evaluate: async () => { evaluations += 1; return { decision: "allow" }; } });
+  assert.equal(await handlers.beforeToolCall({ toolName: "send_email" }), undefined);
+  assert.equal(evaluations, 1);
+});
+test("a model failure flags an ambiguous action without executing it", async () => {
+  const handlers = createHandlers({ ...config, failMode: "open" }, { evaluate: async () => { throw new Error("timeout"); } });
+  const result = await handlers.beforeToolCall({ toolName: "send_email" });
+  assert.equal(result?.block, true);
+  assert.match(result?.blockReason ?? "", /approval/i);
+});
+test("rejects non-strict model decisions", async () => {
+  for (const decision of ["rewrite", "quarantine"]) {
+    const handlers = createHandlers(config, { evaluate: async () => ({ decision }) });
+    assert.equal((await handlers.beforeToolCall({ toolName: "send_email" }))?.block, true);
+  }
+});

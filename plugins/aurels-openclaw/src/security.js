@@ -1,7 +1,5 @@
 const BLOCKED = "Aurels blocked this action because it violates the active security policy.";
-const UNAVAILABLE = "Aurels security verification is unavailable.";
 const SECRET_KEY = /(?:password|secret|token|api[_-]?key|authorization|cookie|credential)/i;
-const PRIVILEGED = new Set(["bash", "shell", "terminal", "exec", "process", "spawn", "write", "delete", "patch", "git", "network", "browser", "http", "fetch", "email", "message", "database", "cloud", "package", "install", "schedule", "delegate", "mcp", "api", "payment", "finance", "auth", "credential"]);
 
 export function loadConfig(raw = {}) {
   const env = process.env;
@@ -58,15 +56,21 @@ export function createHandlers(config, client) {
     async beforeToolCall(event = {}, context = {}) {
       if (!config.enabled || String(event.toolName || "").startsWith("aurels.")) return undefined;
       const action = { version: "1", integration: "openclaw", action: { id: event.toolCallId || crypto.randomUUID(), name: event.toolName, arguments: event.params ?? {} }, agent: { id: context.agentId, sessionId: context.sessionId, runId: context.runId }, timestamp: new Date().toISOString() };
+      const local = localDecision(event);
+      if (local.decision === "allow") return undefined;
+      if (local.decision === "block") {
+        void report(client, config, action, undefined, "blocked", event);
+        return { block: true, blockReason: BLOCKED };
+      }
       try {
-        const decision = config.mode === "local" ? localDecision(event) : validateDecision(await client.evaluate(action));
+        if (config.mode === "local" || !config.apiKey) return flagged(client, config, action, event);
+        const decision = validateDecision(await client.evaluate(action));
         traceByCall.set(action.action.id, decision.traceId);
         if (decision.decision === "allow") return undefined;
-        if (decision.decision === "rewrite" && event.supportsParamRewrite && decision.rewrittenArguments && typeof decision.rewrittenArguments === "object") return { params: decision.rewrittenArguments };
         void report(client, config, action, decision.traceId, "blocked", event);
         return { block: true, blockReason: decision.decision === "flag" ? "Aurels requires human approval before this action can run." : BLOCKED };
       } catch {
-        return config.failMode === "open" && (config.failOpenPrivilegedActions === "allow" || !isPrivileged(event.toolName)) ? undefined : { block: true, blockReason: UNAVAILABLE };
+        return flagged(client, config, action, event);
       }
     },
     async afterToolCall(event = {}, context = {}) {
@@ -76,6 +80,11 @@ export function createHandlers(config, client) {
     },
     status: () => ({ enabled: config.enabled, failMode: config.failMode, telemetry: config.telemetry })
   };
+}
+
+function flagged(client, config, action, event) {
+  void report(client, config, action, undefined, "blocked", event);
+  return { block: true, blockReason: "Aurels requires human approval before this action can run." };
 }
 
 async function report(client, config, action, traceId, status, event) {
@@ -90,11 +99,6 @@ function normalizeUrl(value) {
   return url.toString().replace(/\/$/, "");
 }
 
-function isPrivileged(name) {
-  const normalized = String(name ?? "").toLowerCase().replace(/[^a-z0-9]/g, "_");
-  return normalized.split("_").some((part) => PRIVILEGED.has(part)) || /(?:write|remove|delete|unlink|rename|chmod|filesystem|fs|terminal|exec|shell|spawn|network|http|browser|email|message|database|cloud|package|install|auth|credential)/.test(normalized);
-}
-
 function idempotencyKey(path, payload) {
   const id = path.endsWith("/evaluate") ? payload?.action?.id : payload?.actionId;
   const status = payload?.outcome?.status;
@@ -102,10 +106,9 @@ function idempotencyKey(path, payload) {
 }
 
 function validateDecision(value) {
-  if (!value || typeof value !== "object" || !["allow", "flag", "block", "quarantine", "rewrite"].includes(value.decision)) throw new Error("Malformed Aurels decision");
+  if (!value || typeof value !== "object" || !["allow", "flag", "block"].includes(value.decision)) throw new Error("Malformed Aurels decision");
   if (value.riskScore !== undefined && (typeof value.riskScore !== "number" || !Number.isFinite(value.riskScore) || value.riskScore < 0 || value.riskScore > 100)) throw new Error("Invalid Aurels risk score");
   if (value.ruleIds !== undefined && (!Array.isArray(value.ruleIds) || value.ruleIds.some((id) => typeof id !== "string"))) throw new Error("Invalid Aurels rule IDs");
-  if (value.decision === "rewrite" && (!value.rewrittenArguments || typeof value.rewrittenArguments !== "object" || Array.isArray(value.rewrittenArguments))) throw new Error("Invalid Aurels rewrite");
   return value;
 }
 
@@ -114,5 +117,5 @@ function localDecision(event) {
   const command = String(event.params?.command ?? event.params?.script ?? "").toLowerCase();
   if (/(rm\s+-[^\n]*r|del\s+\/|format\s|drop\s+table|curl[^\n]*\|\s*(sh|bash)|chmod\s+777)/.test(command)) return { decision: "block" };
   if (/^(read|list|get|search|inspect|status)[._:-]/.test(name) || /read_file|list_files|status/.test(name)) return { decision: "allow" };
-  return { decision: "flag" };
+  return { decision: "ambiguous" };
 }

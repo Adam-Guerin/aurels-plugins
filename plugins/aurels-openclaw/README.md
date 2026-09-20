@@ -32,20 +32,21 @@ AURELS_TIMEOUT_MS=1500
 AURELS_TELEMETRY_ENABLED=true
 ```
 
-Leave `AURELS_API_KEY` empty and set `AURELS_MODE=local` for offline use. Local mode allows read-only actions, blocks clearly destructive command patterns, and holds every other action for approval. It is intentionally conservative and does not provide semantic analysis.
+Leave `AURELS_API_KEY` empty and set `AURELS_MODE=local` for offline use. Local rules always run first: they allow known read-only actions, block clearly destructive command patterns, and flag every other action. They are intentionally conservative and do not provide semantic analysis.
 
 ## Decision and outage contract
 
 | Event | Result |
 | --- | --- |
+| Local deterministic `allow` | Tool executes unchanged; the model is not called. |
+| Local deterministic `block` | Tool does not execute; a remote model cannot override it. |
+| Ambiguous action | The configured model evaluates it and must return exactly `allow`, `flag`, or `block`. |
 | `allow` | Tool executes unchanged. |
 | `flag` | Tool does not execute. OpenClaw receives an approval-required block. |
-| `block` / `quarantine` | Tool does not execute. |
-| `rewrite` | Rewritten parameters execute only when the host declares `supportsParamRewrite`; otherwise the tool does not execute. |
-| Timeout, network failure, 4xx/5xx, invalid JSON | Block by default (`failMode=closed`). |
-| Same failures with `failMode=open` | Tool continues. This is for low-risk development use only. |
+| `block` | Tool does not execute. |
+| Timeout, network failure, 4xx/5xx, invalid JSON, or another model output | `flag`: tool does not execute and requires human approval. |
 
-OpenClaw 2026.3.2 does not consume an approval directive in the documented pre-tool hook, so `flag` is deliberately returned as a block.
+OpenClaw 2026.3.2 does not consume an approval directive in the documented pre-tool hook, so `flag` is deliberately returned as a block. `AURELS_FAIL_MODE=open` is not an execution bypass in this release.
 
 ## What leaves the machine
 

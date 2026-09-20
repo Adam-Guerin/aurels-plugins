@@ -33,22 +33,30 @@ class AurelsHermesPlugin:
         context = context or {}
         action_id = context.get("action_id") or str(uuid4())
         request = {"version": "1", "integration": "hermes", "action": {"id": action_id, "name": action_name, "arguments": arguments or {}}, "agent": {"id": context.get("agent_id"), "sessionId": context.get("session_id")}, "timestamp": self._now()}
+        local = self._local_decision(action_name, arguments or {})
+        if local["decision"] == "allow":
+            return {"allow": True, "action_id": action_id}
+        if local["decision"] == "block":
+            self._telemetry(action_id, action_name, arguments, context, "blocked")
+            return {"allow": False, "action_id": action_id, "reason": "Aurels blocked this action because it violates the active security policy."}
         try:
-            decision = self._local_decision(action_name, arguments or {}) if not self.config.api_key else self.client.evaluate(request)
+            if not self.config.api_key:
+                return self._flag(action_id)
+            decision = self.client.evaluate(request)
             outcome = decision.get("decision") if isinstance(decision, dict) else None
-            if outcome not in {"allow", "flag", "block", "quarantine", "rewrite"} or ("riskScore" in decision and (not isinstance(decision["riskScore"], (int, float)) or isinstance(decision["riskScore"], bool) or not 0 <= decision["riskScore"] <= 100)):
+            if outcome not in {"allow", "flag", "block"} or ("riskScore" in decision and (not isinstance(decision["riskScore"], (int, float)) or isinstance(decision["riskScore"], bool) or not 0 <= decision["riskScore"] <= 100)):
                 raise RuntimeError("Malformed Aurels decision")
             self._traces[action_id] = decision.get("traceId")
             if outcome == "allow":
                 return {"allow": True, "action_id": action_id}
-            if outcome == "rewrite" and isinstance(decision.get("rewrittenArguments"), dict):
-                return {"allow": True, "action_id": action_id, "arguments": decision["rewrittenArguments"]}
             self._telemetry(action_id, action_name, arguments, context, "blocked")
             return {"allow": False, "action_id": action_id, "reason": "Aurels requires human approval before this action can run." if outcome == "flag" else "Aurels blocked this action because it violates the active security policy."}
         except Exception:
-            if self.config.fail_mode == "open" and (self.config.fail_open_privileged_actions == "allow" or not self._privileged(action_name)):
-                return {"allow": True, "action_id": action_id, "degraded": True}
-            return {"allow": False, "action_id": action_id, "reason": "Aurels security verification is unavailable."}
+            return self._flag(action_id)
+
+    @staticmethod
+    def _flag(action_id):
+        return {"allow": False, "action_id": action_id, "reason": "Aurels requires human approval before this action can run."}
 
     def after_action(self, action_name, arguments=None, context=None, success=True):
         context = context or {}
@@ -76,4 +84,4 @@ class AurelsHermesPlugin:
             return {"decision": "block"}
         if name.startswith(("read", "list", "get", "search", "inspect", "status")) or name in {"read_file", "list_files"}:
             return {"decision": "allow"}
-        return {"decision": "flag"}
+        return {"decision": "ambiguous"}

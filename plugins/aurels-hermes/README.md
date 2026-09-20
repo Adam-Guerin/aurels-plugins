@@ -53,20 +53,21 @@ AURELS_TELEMETRY_ENABLED=true
 
 You can instead pass a mapping to `AurelsHermesPlugin`, for example `{"api_key": runtime_secret, "fail_mode": "closed"}`. Runtime mapping values take precedence over the environment.
 
-For fully offline use, leave `AURELS_API_KEY` empty. Local mode allows read-only actions, blocks clearly destructive command patterns, and returns approval-required for every other action. It is deliberately conservative and is not semantic analysis.
+For fully offline use, leave `AURELS_API_KEY` empty. Local rules always run first: they allow known read-only actions, block clearly destructive command patterns, and return approval-required for every other action. They are deliberately conservative and are not semantic analysis.
 
 ## Decision and outage contract
 
 | Event | `before_action` result |
 | --- | --- |
+| Local deterministic `allow` | `allow: true`; execute the handler once without a model call. |
+| Local deterministic `block` | `allow: false`; a remote model cannot override it. |
+| Ambiguous action | The configured model evaluates it and must return exactly `allow`, `flag`, or `block`. |
 | `allow` | `allow: true`; execute the handler once. |
-| `rewrite` with object arguments | `allow: true` and replacement arguments. |
 | `flag` | `allow: false`; do not execute; return approval-required to the caller. |
-| `block` / `quarantine` | `allow: false`; do not execute. |
-| Timeout, DNS failure, 4xx/5xx, invalid response | `allow: false` by default. |
-| Those failures with `fail_mode=open` | `allow: true, degraded: true`; development-only choice. |
+| `block` | `allow: false`; do not execute. |
+| Timeout, DNS failure, 4xx/5xx, invalid response, or another model output | `flag`; `allow: false` and no execution. |
 
-The library never calls a protected handler itself. The hosting adapter must respect `allow: false`; the included tests exercise that security boundary.
+The library never calls a protected handler itself. The hosting adapter must respect `allow: false`; the included tests exercise that security boundary. `AURELS_FAIL_MODE=open` is not an execution bypass in this release.
 
 ## Data handling
 
