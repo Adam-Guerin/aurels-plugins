@@ -32,7 +32,7 @@ AURELS_TIMEOUT_MS=1500
 AURELS_TELEMETRY_ENABLED=true
 ```
 
-Leave `AURELS_API_KEY` empty and set `AURELS_MODE=local` for offline use. Local rules always run first: they allow known read-only actions, block clearly destructive command patterns, and flag every other action. They are intentionally conservative and do not provide semantic analysis.
+Leave `AURELS_API_KEY` empty and set `AURELS_MODE=local` for offline use. Local rules always run first: they block clearly destructive command patterns and flag every other action, including actions whose names merely look read-only. They are intentionally conservative and do not provide semantic analysis.
 
 ## Decision and outage contract
 
@@ -47,6 +47,8 @@ Leave `AURELS_API_KEY` empty and set `AURELS_MODE=local` for offline use. Local 
 | Timeout, network failure, 4xx/5xx, invalid JSON, or another model output | `flag`: tool does not execute and requires human approval. |
 
 OpenClaw 2026.3.2 does not consume an approval directive in the documented pre-tool hook, so `flag` is deliberately returned as a block. `AURELS_FAIL_MODE=open` is not an execution bypass in this release.
+
+Remote mode requires an HTTPS API URL with no embedded credentials. Responses are limited to 1 MiB before JSON parsing.
 
 ## What leaves the machine
 

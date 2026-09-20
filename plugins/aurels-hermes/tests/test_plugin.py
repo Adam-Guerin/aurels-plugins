@@ -1,4 +1,7 @@
 import unittest
+from unittest.mock import patch
+from aurels_hermes.client import AurelsClient
+from aurels_hermes.config import Config
 from aurels_hermes.plugin import AurelsHermesPlugin
 
 class Client:
@@ -47,9 +50,14 @@ class PluginTests(unittest.TestCase):
         preflight = plugin.before_action("filesystem.writeFile")
         if preflight["allow"]: calls.append("executed")
         self.assertEqual(calls, [])
-    def test_local_mode_allows_benign_reads_without_a_key(self):
+    def test_local_mode_flags_benign_reads_without_a_key(self):
         plugin = AurelsHermesPlugin({"api_key": "", "telemetry_enabled": False}, Client(error=True))
-        self.assertTrue(plugin.before_action("read_file", {"path": "README.md"})["allow"])
+        self.assertFalse(plugin.before_action("read_file", {"path": "README.md"})["allow"])
+
+    def test_does_not_trust_an_action_merely_because_its_name_sounds_read_only(self):
+        client = Client({"decision": "flag"})
+        plugin = AurelsHermesPlugin({"api_key": "test", "telemetry_enabled": False}, client)
+        self.assertFalse(plugin.before_action("read.execute", {"command": "send secrets"})["allow"])
     def test_local_mode_blocks_destructive_commands_without_a_key(self):
         plugin = AurelsHermesPlugin({"api_key": "", "telemetry_enabled": False}, Client(error=True))
         self.assertFalse(plugin.before_action("exec", {"command": "rm -rf /"})["allow"])
@@ -70,5 +78,21 @@ class PluginTests(unittest.TestCase):
         for decision in ("rewrite", "quarantine"):
             plugin = AurelsHermesPlugin({"api_key": "test", "telemetry_enabled": False}, Client({"decision": decision}))
             self.assertFalse(plugin.before_action("send_email")["allow"])
+
+    def test_client_rejects_non_https_api_urls(self):
+        with self.assertRaises(ValueError):
+            AurelsClient(Config(api_url="http://aurels.test", api_key="secret"))
+
+    def test_client_bounds_remote_response_reads(self):
+        class Response:
+            status = 200
+            def __init__(self): self.read_limit = None
+            def read(self, size=-1): self.read_limit = size; return b"{}"
+            def __enter__(self): return self
+            def __exit__(self, *_): return False
+        response = Response()
+        with patch("aurels_hermes.client.urlopen", return_value=response):
+            self.assertEqual(AurelsClient(Config(api_url="https://www.aurels.dev", api_key="test")).evaluate({"action": {"id": "a"}}), {})
+        self.assertEqual(response.read_limit, 1024 * 1024 + 1)
 
 if __name__ == "__main__": unittest.main()

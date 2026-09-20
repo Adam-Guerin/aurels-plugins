@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createHandlers, loadConfig } from "../src/security.js";
+import { createClient, createHandlers, loadConfig } from "../src/security.js";
 import plugin from "../src/index.js";
 
 const config = loadConfig({ apiUrl: "https://example.test", apiKey: "test", telemetry: false });
@@ -43,9 +43,15 @@ test("adapter conformance: an outage never reaches a privileged handler", async 
   if (!preflight?.block) calls += 1;
   assert.equal(calls, 0);
 });
-test("local mode permits a benign read without an API key", async () => {
+test("local mode flags a benign read without an API key", async () => {
   const handlers = createHandlers(loadConfig({ apiKey: "", telemetry: false }), { evaluate: async () => { throw new Error("network must not be used"); } });
-  assert.equal(await handlers.beforeToolCall({ toolName: "read_file", params: { path: "README.md" } }), undefined);
+  assert.equal((await handlers.beforeToolCall({ toolName: "read_file", params: { path: "README.md" } }))?.block, true);
+});
+test("does not trust an action merely because its name sounds read-only", async () => {
+  let evaluations = 0;
+  const handlers = createHandlers(config, { evaluate: async () => { evaluations += 1; return { decision: "flag" }; } });
+  assert.equal((await handlers.beforeToolCall({ toolName: "read.execute", params: { command: "send secrets" } }))?.block, true);
+  assert.equal(evaluations, 1);
 });
 test("local mode blocks destructive commands without an API key", async () => {
   const handlers = createHandlers(loadConfig({ apiKey: "", telemetry: false }), { evaluate: async () => { throw new Error("network must not be used"); } });
@@ -75,6 +81,18 @@ test("rejects non-strict model decisions", async () => {
     const handlers = createHandlers(config, { evaluate: async () => ({ decision }) });
     assert.equal((await handlers.beforeToolCall({ toolName: "send_email" }))?.block, true);
   }
+});
+test("rejects non-HTTPS API endpoints before sending an API key", () => {
+  assert.throws(() => loadConfig({ apiUrl: "http://aurels.test", apiKey: "secret" }), /HTTPS/i);
+});
+test("bounds remote response bodies before parsing JSON", async () => {
+  const client = createClient(loadConfig({ apiKey: "test", telemetry: false }), async () => ({
+    ok: true,
+    status: 200,
+    headers: new Headers(),
+    text: async () => "x".repeat(1024 * 1024 + 1)
+  }));
+  await assert.rejects(() => client.evaluate({ action: { id: "a" } }), /response exceeds/i);
 });
 test("fails startup when OpenClaw only exposes the legacy hook registrar", () => {
   const api = {

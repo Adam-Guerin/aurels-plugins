@@ -1,5 +1,6 @@
 const BLOCKED = "Aurels blocked this action because it violates the active security policy.";
 const SECRET_KEY = /(?:password|secret|token|api[_-]?key|authorization|cookie|credential)/i;
+const MAX_RESPONSE_BYTES = 1024 * 1024;
 
 export function loadConfig(raw = {}) {
   const env = process.env;
@@ -44,7 +45,11 @@ export function createClient(config, fetchImpl = globalThis.fetch) {
         body: JSON.stringify(payload), signal: controller.signal
       });
       if (!response.ok) throw new Error(`Aurels returned HTTP ${response.status}`);
-      return await response.json();
+      const declaredLength = Number(response.headers?.get?.("content-length"));
+      if (Number.isFinite(declaredLength) && declaredLength > MAX_RESPONSE_BYTES) throw new Error("Aurels response exceeds the maximum allowed size.");
+      const body = await response.text();
+      if (new TextEncoder().encode(body).byteLength > MAX_RESPONSE_BYTES) throw new Error("Aurels response exceeds the maximum allowed size.");
+      return JSON.parse(body);
     } finally { clearTimeout(timer); }
   }
   return { evaluate: (action) => request("/api/v1/actions/evaluate", action), telemetry: (event) => request("/api/v1/actions/telemetry", event) };
@@ -94,7 +99,7 @@ async function report(client, config, action, traceId, status, event) {
 
 function normalizeUrl(value) {
   const url = new URL(value);
-  if (!/^https?:$/.test(url.protocol) || url.username || url.password) throw new Error("Aurels API URL must be http(s) and contain no credentials.");
+  if (url.protocol !== "https:" || url.username || url.password) throw new Error("Aurels API URL must use HTTPS and contain no credentials.");
   url.search = ""; url.hash = "";
   return url.toString().replace(/\/$/, "");
 }
@@ -116,6 +121,5 @@ function localDecision(event) {
   const name = String(event.toolName ?? "").toLowerCase();
   const command = String(event.params?.command ?? event.params?.script ?? "").toLowerCase();
   if (/(rm\s+-[^\n]*r|del\s+\/|format\s|drop\s+table|curl[^\n]*\|\s*(sh|bash)|chmod\s+777)/.test(command)) return { decision: "block" };
-  if (/^(read|list|get|search|inspect|status)[._:-]/.test(name) || /read_file|list_files|status/.test(name)) return { decision: "allow" };
   return { decision: "ambiguous" };
 }

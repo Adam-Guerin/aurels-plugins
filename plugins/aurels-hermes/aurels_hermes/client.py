@@ -3,12 +3,14 @@ from urllib.parse import urlparse, urlunparse, quote
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+MAX_RESPONSE_BYTES = 1024 * 1024
+
 class AurelsClient:
     def __init__(self, config):
         self.config = config
         parsed = urlparse(config.api_url)
-        if parsed.scheme not in {"http", "https"} or parsed.username or parsed.password:
-            raise ValueError("Aurels API URL must be http(s) and contain no credentials")
+        if parsed.scheme != "https" or parsed.username or parsed.password:
+            raise ValueError("Aurels API URL must use HTTPS and contain no credentials")
         self.base_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path.rstrip("/"), "", "", ""))
 
     def evaluate(self, action):
@@ -28,7 +30,10 @@ class AurelsClient:
             with urlopen(request, timeout=self.config.timeout_ms / 1000) as response:
                 if response.status < 200 or response.status >= 300:
                     raise RuntimeError(f"Aurels returned HTTP {response.status}")
-                return json.loads(response.read().decode())
+                body = response.read(MAX_RESPONSE_BYTES + 1)
+                if len(body) > MAX_RESPONSE_BYTES:
+                    raise ValueError("Aurels response exceeds the maximum allowed size")
+                return json.loads(body.decode())
         except (HTTPError, URLError, TimeoutError, ValueError) as error:
             raise RuntimeError("Aurels request failed") from error
 

@@ -34,8 +34,6 @@ class AurelsHermesPlugin:
         action_id = context.get("action_id") or str(uuid4())
         request = {"version": "1", "integration": "hermes", "action": {"id": action_id, "name": action_name, "arguments": arguments or {}}, "agent": {"id": context.get("agent_id"), "sessionId": context.get("session_id")}, "timestamp": self._now()}
         local = self._local_decision(action_name, arguments or {})
-        if local["decision"] == "allow":
-            return {"allow": True, "action_id": action_id}
         if local["decision"] == "block":
             self._telemetry(action_id, action_name, arguments, context, "blocked")
             return {"allow": False, "action_id": action_id, "reason": "Aurels blocked this action because it violates the active security policy."}
@@ -82,6 +80,4 @@ class AurelsHermesPlugin:
         command = str(arguments.get("command", arguments.get("script", ""))).lower() if isinstance(arguments, dict) else ""
         if any(pattern in command for pattern in ("rm -rf", "del /", "format ", "drop table", "| sh", "| bash", "chmod 777")):
             return {"decision": "block"}
-        if name.startswith(("read", "list", "get", "search", "inspect", "status")) or name in {"read_file", "list_files"}:
-            return {"decision": "allow"}
         return {"decision": "ambiguous"}

@@ -10,7 +10,9 @@
 
 ## Failure handling
 
-The default is fail closed. Any unavailable, malformed, or non-success Aurels response becomes `allow: false`; no action should run. `fail_mode=open` turns these cases into an explicitly degraded allow and should not be used for high-consequence tools.
+Any unavailable, malformed, oversized, or non-success Aurels response becomes `allow: false`; no action should run. `fail_mode=open` is retained only for configuration compatibility and does not permit execution after a failure.
+
+Remote endpoints must use HTTPS and must not contain embedded credentials. Response bodies are capped at 1 MiB before parsing.
 
 ## Credential rotation
 

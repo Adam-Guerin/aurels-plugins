@@ -10,7 +10,9 @@
 
 ## Failures
 
-`closed` is the production default: API outages, DNS failures, timeout, malformed responses, and unexpected decisions block execution. `open` allows execution after those failures and should only be selected through a documented risk decision.
+API outages, DNS failures, timeout, malformed responses, oversized responses, and unexpected decisions always flag and block execution. `AURELS_FAIL_MODE=open` is retained only for configuration compatibility; it is not an execution bypass.
+
+Remote endpoints must use HTTPS and must not contain embedded credentials. Response bodies are capped at 1 MiB before parsing.
 
 ## Key rotation
 

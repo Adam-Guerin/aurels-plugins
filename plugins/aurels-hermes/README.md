@@ -53,7 +53,7 @@ AURELS_TELEMETRY_ENABLED=true
 
 You can instead pass a mapping to `AurelsHermesPlugin`, for example `{"api_key": runtime_secret, "fail_mode": "closed"}`. Runtime mapping values take precedence over the environment.
 
-For fully offline use, leave `AURELS_API_KEY` empty. Local rules always run first: they allow known read-only actions, block clearly destructive command patterns, and return approval-required for every other action. They are deliberately conservative and are not semantic analysis.
+For fully offline use, leave `AURELS_API_KEY` empty. Local rules always run first: they block clearly destructive command patterns and return approval-required for every other action, including actions whose names merely look read-only. They are deliberately conservative and are not semantic analysis.
 
 ## Decision and outage contract
 
@@ -68,6 +68,8 @@ For fully offline use, leave `AURELS_API_KEY` empty. Local rules always run firs
 | Timeout, DNS failure, 4xx/5xx, invalid response, or another model output | `flag`; `allow: false` and no execution. |
 
 The library never calls a protected handler itself. The hosting adapter must respect `allow: false`; the included tests exercise that security boundary. `AURELS_FAIL_MODE=open` is not an execution bypass in this release.
+
+Remote mode requires an HTTPS API URL with no embedded credentials. Responses are limited to 1 MiB before JSON parsing.
 
 ## Data handling
 
