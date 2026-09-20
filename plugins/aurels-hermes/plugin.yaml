@@ -1,0 +1,13 @@
+id: aurels-hermes
+name: Aurels for Hermes
+version: 0.2.0
+entrypoint: aurels_hermes.plugin:AurelsHermesPlugin
+capabilities:
+  - before_action
+  - after_action
+configuration:
+  - api_url
+  - api_key
+  - fail_mode
+  - timeout_ms
+  - telemetry_enabled

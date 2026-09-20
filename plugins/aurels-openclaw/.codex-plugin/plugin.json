@@ -1,6 +1,6 @@
 {
   "name": "aurels-openclaw",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Aurels integration for OpenClaw.",
   "author": {
     "name": "Aurels"
@@ -10,7 +10,7 @@
   "interface": {
     "displayName": "Aurels for OpenClaw",
     "shortDescription": "Use Aurels with OpenClaw.",
-    "longDescription": "Connect Aurels capabilities to OpenClaw workflows.",
+    "longDescription": "Independent OpenClaw pre-execution security hook with explicit failure and approval handling.",
     "developerName": "Aurels",
     "category": "Productivity",
     "capabilities": ["Interactive"],

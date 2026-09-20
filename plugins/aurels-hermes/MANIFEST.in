@@ -1,0 +1,6 @@
+include README.md
+include CHANGELOG.md
+include LICENSE
+include plugin.yaml
+include .env.example
+recursive-include docs *.md

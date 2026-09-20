@@ -1,0 +1,17 @@
+{
+  "id": "aurels",
+  "name": "Aurels Security",
+  "version": "0.2.0",
+  "description": "Pre-execution Aurels policy enforcement for OpenClaw tool calls.",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "apiUrl": { "type": "string" },
+      "apiKey": { "type": "string" },
+      "failMode": { "enum": ["closed", "open"] },
+      "timeoutMs": { "type": "number", "minimum": 100, "maximum": 30000 },
+      "telemetry": { "type": "boolean" }
+    }
+  }
+}

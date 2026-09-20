@@ -7,7 +7,7 @@ Open-source plugins maintained by Aurels for the OpenClaw and Hermes ecosystems.
 - **Aurels for OpenClaw** — integration package for OpenClaw.
 - **Aurels for Hermes** — integration package for Hermes.
 
-Each plugin is self-contained in `plugins/`, with its manifest and its own usage documentation.
+Each plugin is self-contained in `plugins/`, with its executable source, tests, configuration example, release notes, and operating documentation. No code from the Aurels web application is required to run either package.
 
 ## Repository layout
 
@@ -16,6 +16,11 @@ plugins/
   aurels-openclaw/
   aurels-hermes/
 ```
+
+Start with the documentation inside the package you want to install:
+
+- [OpenClaw installation and security contract](plugins/aurels-openclaw/README.md)
+- [Hermes installation and security contract](plugins/aurels-hermes/README.md)
 
 ## Contributing
 

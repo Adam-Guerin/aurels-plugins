@@ -19,3 +19,11 @@ jobs:
           for manifest in plugins/*/.codex-plugin/plugin.json; do
             python -m json.tool "$manifest" > /dev/null
           done
+      - name: Test OpenClaw plugin
+        working-directory: plugins/aurels-openclaw
+        run: |
+          npm test
+          npm run check
+      - name: Test Hermes plugin
+        working-directory: plugins/aurels-hermes
+        run: python -m unittest discover -s tests
