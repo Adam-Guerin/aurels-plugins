@@ -20,7 +20,7 @@ const manifest = { schema: 1, generatedAt, commit, plugins: entries };
 await writeFile(join(dist, "MANIFEST.json"), JSON.stringify(manifest, null, 2) + "\n");
 await writeFile(join(dist, "SHA256SUMS"), entries.map((entry) => `${entry.sha256}  ${entry.path}`).join("\n") + "\n");
 await writeFile(join(dist, "PROVENANCE.json"), JSON.stringify({ schema: 1, repository: "https://github.com/Adam-Guerin/aurels-plugins", commit, workflow: "GitHub Actions release-artifacts", generatedAt: manifest.generatedAt }, null, 2) + "\n");
-await writeFile(join(dist, "SBOM.spdx.json"), JSON.stringify({ SPDXID: "SPDXRef-DOCUMENT", spdxVersion: "SPDX-2.3", name: "aurels-plugins", documentNamespace: `https://github.com/Adam-Guerin/aurels-plugins/releases/${commit}`, creationInfo: { created: manifest.generatedAt, creators: ["Tool: aurels release manifest"] }, packages: ["aurels-openclaw", "aurels-hermes"].map((name) => ({ SPDXID: `SPDXRef-${name}`, name, versionInfo: "0.2.0", downloadLocation: "NOASSERTION", licenseConcluded: "MIT" })) }, null, 2) + "\n");
+await writeFile(join(dist, "SBOM.spdx.json"), JSON.stringify({ SPDXID: "SPDXRef-DOCUMENT", spdxVersion: "SPDX-2.3", name: "aurels-plugins", documentNamespace: `https://github.com/Adam-Guerin/aurels-plugins/releases/${commit}`, creationInfo: { created: manifest.generatedAt, creators: ["Tool: aurels release manifest"] }, packages: ["aurels-openclaw", "aurels-hermes"].map((name) => ({ SPDXID: `SPDXRef-${name}`, name, versionInfo: "0.2.1", downloadLocation: "NOASSERTION", licenseConcluded: "MIT" })) }, null, 2) + "\n");
 console.log(`Release metadata generated for ${entries.length} files at ${dist}`);
 
 async function collect(path, output) {
