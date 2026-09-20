@@ -18,5 +18,21 @@ class PluginTests(unittest.TestCase):
             self.assertFalse(plugin.before_action("exec")["allow"])
     def test_failure_is_closed_by_default(self):
         self.assertFalse(AurelsHermesPlugin({"api_key": "test"}, Client(error=True)).before_action("exec")["allow"])
+    def test_native_registration_requires_both_hooks(self):
+        class Host:
+            supported_hooks = {"pre_tool_call", "post_tool_call"}
+            def __init__(self): self.hooks = []
+            def register_hook(self, name, handler): self.hooks.append(name); return True
+        host = Host()
+        AurelsHermesPlugin({"api_key": "test"}, Client({"decision": "allow"})).register(host)
+        self.assertEqual(host.hooks, ["pre_tool_call", "post_tool_call"])
+    def test_missing_native_hooks_fails_startup(self):
+        class Host: supported_hooks = {"pre_tool_call"}
+        with self.assertRaises(RuntimeError):
+            AurelsHermesPlugin({"api_key": "test"}, Client({"decision": "allow"})).register(Host())
+    def test_privileged_fail_open_stays_blocked(self):
+        self.assertFalse(AurelsHermesPlugin({"api_key": "test", "fail_mode": "open"}, Client(error=True)).before_action("filesystem.writeFile")["allow"])
+    def test_malformed_metadata_fails_closed(self):
+        self.assertFalse(AurelsHermesPlugin({"api_key": "test"}, Client({"decision": "allow", "riskScore": "bad"})).before_action("exec")["allow"])
 
 if __name__ == "__main__": unittest.main()

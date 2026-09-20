@@ -1,10 +1,15 @@
 import json
+from urllib.parse import urlparse, urlunparse, quote
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 class AurelsClient:
     def __init__(self, config):
         self.config = config
+        parsed = urlparse(config.api_url)
+        if parsed.scheme not in {"http", "https"} or parsed.username or parsed.password:
+            raise ValueError("Aurels API URL must be http(s) and contain no credentials")
+        self.base_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path.rstrip("/"), "", "", ""))
 
     def evaluate(self, action):
         return self._post("/api/v1/actions/evaluate", action)
@@ -14,9 +19,9 @@ class AurelsClient:
 
     def _post(self, path, payload):
         request = Request(
-            f"{self.config.api_url}{path}",
+            f"{self.base_url}{path}",
             data=json.dumps(payload).encode(),
-            headers={"Content-Type": "application/json", "Authorization": f"Bearer {self.config.api_key}"},
+            headers={"Content-Type": "application/json", "X-API-Key": self.config.api_key, "Idempotency-Key": self._idempotency_key(path, payload)},
             method="POST",
         )
         try:
@@ -26,3 +31,9 @@ class AurelsClient:
                 return json.loads(response.read().decode())
         except (HTTPError, URLError, TimeoutError, ValueError) as error:
             raise RuntimeError("Aurels request failed") from error
+
+    @staticmethod
+    def _idempotency_key(path, payload):
+        action_id = payload.get("action", {}).get("id") if path.endswith("/evaluate") else payload.get("actionId")
+        status = payload.get("outcome", {}).get("status", "")
+        return f"{'action-evaluate' if path.endswith('/evaluate') else 'action-telemetry'}:{quote(str(action_id or 'unknown'), safe='')}" + (f":{status}" if status else "")

@@ -10,8 +10,16 @@
       "apiUrl": { "type": "string" },
       "apiKey": { "type": "string" },
       "failMode": { "enum": ["closed", "open"] },
+      "failOpenPrivilegedActions": { "enum": ["block", "allow"] },
       "timeoutMs": { "type": "number", "minimum": 100, "maximum": 30000 },
-      "telemetry": { "type": "boolean" }
+      "telemetry": { "type": "boolean" },
+      "tools": {
+        "type": "object",
+        "properties": {
+          "include": { "type": "array", "items": { "type": "string" } },
+          "exclude": { "type": "array", "items": { "type": "string" } }
+        }
+      }
     }
   }
 }

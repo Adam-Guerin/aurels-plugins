@@ -21,6 +21,9 @@ Start with the documentation inside the package you want to install:
 
 - [OpenClaw installation and security contract](plugins/aurels-openclaw/README.md)
 - [Hermes installation and security contract](plugins/aurels-hermes/README.md)
+- [Supported runtimes and coverage boundaries](docs/SUPPORT-MATRIX.md)
+- [Release verification and supply-chain evidence](docs/RELEASE-TRUST.md)
+- [Security reporting and least-privilege keys](SECURITY.md)
 
 ## Contributing
 

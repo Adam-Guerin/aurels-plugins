@@ -1,6 +1,6 @@
 # Aurels for Hermes
 
-`aurels-hermes` is a standalone Python 3.11+ guard for Hermes action handlers. It exposes `before_action` and `after_action`; a Hermes adapter calls `before_action` immediately before the side effect and only invokes the action handler when the returned `allow` value is true.
+`aurels-hermes` is a standalone Python 3.11+ native Hermes guard. At startup it registers `pre_tool_call` and `post_tool_call`; a host missing either declared hook fails startup rather than silently running without protection.
 
 ## Support contract
 
@@ -39,7 +39,7 @@ def run_tool(name, arguments, context):
     return result
 ```
 
-`before_action` and the exact tool execution must be adjacent. Do not mutate arguments after evaluation unless you use the `arguments` returned for an Aurels `rewrite` decision.
+`before_action` and the exact tool execution must be adjacent. Do not mutate arguments after evaluation unless you use the `arguments` returned for an Aurels `rewrite` decision. For native registration, call `guard.register(hermes_host)` during host startup.
 
 ## Configure
 

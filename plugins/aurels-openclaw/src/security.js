@@ -1,6 +1,7 @@
 const BLOCKED = "Aurels blocked this action because it violates the active security policy.";
 const UNAVAILABLE = "Aurels security verification is unavailable.";
 const SECRET_KEY = /(?:password|secret|token|api[_-]?key|authorization|cookie|credential)/i;
+const PRIVILEGED = new Set(["bash", "shell", "terminal", "exec", "process", "spawn", "write", "delete", "patch", "git", "network", "browser", "http", "fetch", "email", "message", "database", "cloud", "package", "install", "schedule", "delegate", "mcp", "api", "payment", "finance", "auth", "credential"]);
 
 export function loadConfig(raw = {}) {
   const env = process.env;
@@ -8,18 +9,28 @@ export function loadConfig(raw = {}) {
   const timeoutMs = Number(cfg.timeoutMs ?? env.AURELS_TIMEOUT_MS ?? 1500);
   return {
     enabled: cfg.enabled ?? env.AURELS_ENABLED !== "false",
-    apiUrl: String(cfg.apiUrl ?? env.AURELS_API_URL ?? "https://www.aurels.dev").replace(/\/$/, ""),
+    apiUrl: normalizeUrl(String(cfg.apiUrl ?? env.AURELS_API_URL ?? "https://www.aurels.dev")),
     apiKey: String(cfg.apiKey ?? env.AURELS_API_KEY ?? ""),
     failMode: cfg.failMode ?? env.AURELS_FAIL_MODE ?? "closed",
+    failOpenPrivilegedActions: cfg.failOpenPrivilegedActions ?? env.AURELS_FAIL_OPEN_PRIVILEGED_ACTIONS ?? "block",
     timeoutMs: Number.isFinite(timeoutMs) ? Math.min(Math.max(timeoutMs, 100), 30000) : 1500,
     telemetry: cfg.telemetry ?? env.AURELS_TELEMETRY_ENABLED !== "false"
   };
 }
 
-export function redact(value) {
-  if (Array.isArray(value)) return value.map(redact);
-  if (!value || typeof value !== "object") return value;
-  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, SECRET_KEY.test(key) ? "[REDACTED]" : redact(item)]));
+export function redact(value, seen = new WeakSet(), depth = 0) {
+  if (!value || typeof value !== "object") return typeof value === "string" ? value.slice(0, 4096) : value;
+  if (depth > 8) return "[MaxDepth]";
+  if (seen.has(value)) return "[Circular]";
+  seen.add(value);
+  try {
+    if (Array.isArray(value)) return value.slice(0, 50).map((item) => redact(item, seen, depth + 1));
+    const output = {};
+    for (const key of Object.keys(value).slice(0, 100)) {
+      try { output[key] = SECRET_KEY.test(key) ? "[REDACTED]" : redact(value[key], seen, depth + 1); } catch { output[key] = "[UnserializableProperty]"; }
+    }
+    return output;
+  } finally { seen.delete(value); }
 }
 
 export function createClient(config, fetchImpl = globalThis.fetch) {
@@ -30,7 +41,7 @@ export function createClient(config, fetchImpl = globalThis.fetch) {
     try {
       const response = await fetchImpl(`${config.apiUrl}${path}`, {
         method: "POST",
-        headers: { "content-type": "application/json", authorization: `Bearer ${config.apiKey}` },
+        headers: { "content-type": "application/json", "x-api-key": config.apiKey, "idempotency-key": idempotencyKey(path, payload) },
         body: JSON.stringify(payload), signal: controller.signal
       });
       if (!response.ok) throw new Error(`Aurels returned HTTP ${response.status}`);
@@ -47,15 +58,14 @@ export function createHandlers(config, client) {
       if (!config.enabled || String(event.toolName || "").startsWith("aurels.")) return undefined;
       const action = { version: "1", integration: "openclaw", action: { id: event.toolCallId || crypto.randomUUID(), name: event.toolName, arguments: event.params ?? {} }, agent: { id: context.agentId, sessionId: context.sessionId, runId: context.runId }, timestamp: new Date().toISOString() };
       try {
-        const decision = await client.evaluate(action);
-        if (!decision || !["allow", "flag", "block", "quarantine", "rewrite"].includes(decision.decision)) throw new Error("Malformed Aurels decision");
+        const decision = validateDecision(await client.evaluate(action));
         traceByCall.set(action.action.id, decision.traceId);
         if (decision.decision === "allow") return undefined;
         if (decision.decision === "rewrite" && event.supportsParamRewrite && decision.rewrittenArguments && typeof decision.rewrittenArguments === "object") return { params: decision.rewrittenArguments };
         void report(client, config, action, decision.traceId, "blocked", event);
         return { block: true, blockReason: decision.decision === "flag" ? "Aurels requires human approval before this action can run." : BLOCKED };
       } catch {
-        return config.failMode === "open" ? undefined : { block: true, blockReason: UNAVAILABLE };
+        return config.failMode === "open" && (config.failOpenPrivilegedActions === "allow" || !isPrivileged(event.toolName)) ? undefined : { block: true, blockReason: UNAVAILABLE };
       }
     },
     async afterToolCall(event = {}, context = {}) {
@@ -70,4 +80,30 @@ export function createHandlers(config, client) {
 async function report(client, config, action, traceId, status, event) {
   if (!config.telemetry) return;
   try { await client.telemetry({ version: "1", integration: "openclaw", actionId: action.action.id, traceId, agent: action.agent, outcome: { status }, metadata: { tool: event.toolName, params: redact(event.params ?? {}) }, timestamp: new Date().toISOString() }); } catch { /* telemetry never changes enforcement */ }
+}
+
+function normalizeUrl(value) {
+  const url = new URL(value);
+  if (!/^https?:$/.test(url.protocol) || url.username || url.password) throw new Error("Aurels API URL must be http(s) and contain no credentials.");
+  url.search = ""; url.hash = "";
+  return url.toString().replace(/\/$/, "");
+}
+
+function isPrivileged(name) {
+  const normalized = String(name ?? "").toLowerCase().replace(/[^a-z0-9]/g, "_");
+  return normalized.split("_").some((part) => PRIVILEGED.has(part)) || /(?:write|remove|delete|unlink|rename|chmod|filesystem|fs|terminal|exec|shell|spawn|network|http|browser|email|message|database|cloud|package|install|auth|credential)/.test(normalized);
+}
+
+function idempotencyKey(path, payload) {
+  const id = path.endsWith("/evaluate") ? payload?.action?.id : payload?.actionId;
+  const status = payload?.outcome?.status;
+  return `${path.endsWith("/evaluate") ? "action-evaluate" : "action-telemetry"}:${encodeURIComponent(String(id ?? "unknown"))}${status ? `:${status}` : ""}`;
+}
+
+function validateDecision(value) {
+  if (!value || typeof value !== "object" || !["allow", "flag", "block", "quarantine", "rewrite"].includes(value.decision)) throw new Error("Malformed Aurels decision");
+  if (value.riskScore !== undefined && (typeof value.riskScore !== "number" || !Number.isFinite(value.riskScore) || value.riskScore < 0 || value.riskScore > 100)) throw new Error("Invalid Aurels risk score");
+  if (value.ruleIds !== undefined && (!Array.isArray(value.ruleIds) || value.ruleIds.some((id) => typeof id !== "string"))) throw new Error("Invalid Aurels rule IDs");
+  if (value.decision === "rewrite" && (!value.rewrittenArguments || typeof value.rewrittenArguments !== "object" || Array.isArray(value.rewrittenArguments))) throw new Error("Invalid Aurels rewrite");
+  return value;
 }
