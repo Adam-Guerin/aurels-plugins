@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHandlers, loadConfig } from "../src/security.js";
+import plugin from "../src/index.js";
 
 const config = loadConfig({ apiUrl: "https://example.test", apiKey: "test", telemetry: false });
 test("allows an allowed action", async () => {
@@ -74,4 +75,20 @@ test("rejects non-strict model decisions", async () => {
     const handlers = createHandlers(config, { evaluate: async () => ({ decision }) });
     assert.equal((await handlers.beforeToolCall({ toolName: "send_email" }))?.block, true);
   }
+});
+test("fails startup when OpenClaw only exposes the legacy hook registrar", () => {
+  const api = {
+    getConfig: () => ({ apiUrl: "https://example.test", apiKey: "test", telemetry: false }),
+    registerHook: () => true
+  };
+  assert.throws(() => plugin.register(api), /before_tool_call/i);
+});
+test("uses the documented OpenClaw registrar even when it returns undefined", () => {
+  const calls = [];
+  const api = {
+    getConfig: () => ({ apiUrl: "https://example.test", apiKey: "test", telemetry: false }),
+    on: (...args) => { calls.push(args); }
+  };
+  plugin.register(api);
+  assert.deepEqual(calls.map(([name]) => name), ["before_tool_call", "after_tool_call"]);
 });

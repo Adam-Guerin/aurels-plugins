@@ -4,7 +4,7 @@ export default {
   id: "aurels",
   name: "Aurels Security",
   register(api) {
-    const register = api?.on ?? api?.registerHook;
+    const register = api?.on;
     if (typeof register !== "function") throw new Error("Aurels requires OpenClaw before_tool_call and after_tool_call hooks.");
     const config = loadConfig(api.getConfig?.() ?? api.config ?? {});
     const handlers = createHandlers(config, createClient(config));

@@ -19,6 +19,7 @@ plugins/
 
 Start with the documentation inside the package you want to install:
 
+- [Complete documentation index](docs/INDEX.md)
 - [OpenClaw installation and security contract](plugins/aurels-openclaw/README.md)
 - [Hermes installation and security contract](plugins/aurels-hermes/README.md)
 - [Supported runtimes and coverage boundaries](docs/SUPPORT-MATRIX.md)
