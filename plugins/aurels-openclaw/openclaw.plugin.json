@@ -7,19 +7,12 @@
     "type": "object",
     "additionalProperties": false,
     "properties": {
+      "enabled": { "type": "boolean" },
       "apiUrl": { "type": "string" },
       "apiKey": { "type": "string" },
-      "failMode": { "enum": ["closed", "open"] },
-      "failOpenPrivilegedActions": { "enum": ["block", "allow"] },
+      "mode": { "enum": ["local", "remote"] },
       "timeoutMs": { "type": "number", "minimum": 100, "maximum": 30000 },
-      "telemetry": { "type": "boolean" },
-      "tools": {
-        "type": "object",
-        "properties": {
-          "include": { "type": "array", "items": { "type": "string" } },
-          "exclude": { "type": "array", "items": { "type": "string" } }
-        }
-      }
+      "telemetry": { "type": "boolean" }
     }
   }
 }
