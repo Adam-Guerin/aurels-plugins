@@ -6,7 +6,7 @@
 
 | Component | Supported version |
 | --- | --- |
-| Plugin | 0.2.1 |
+| Plugin | 0.2.2 |
 | Python | 3.11 or newer |
 | Hermes host | Any host adapter able to call synchronous pre- and post-action hooks |
 | Aurels API | `/api/v1/actions/evaluate` and `/api/v1/actions/telemetry` |

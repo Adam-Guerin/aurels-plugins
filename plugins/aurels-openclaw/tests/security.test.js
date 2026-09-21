@@ -147,7 +147,7 @@ test("flagged actions can continue when host approval is granted", async () => {
 });
 test("cleans trace state after post-tool telemetry", async () => {
   const calls = [];
-  const handlers = createHandlers(config, {
+  const handlers = createHandlers({ ...config, telemetry: true }, {
     evaluate: async () => ({ decision: "allow", traceId: "trace-123" }),
     telemetry: async (payload) => { calls.push(payload); }
   });
@@ -158,7 +158,7 @@ test("cleans trace state after post-tool telemetry", async () => {
   assert.equal(calls[1]?.traceId, undefined);
 });
 test("redacts sensitive values embedded in strings", () => {
-  assert.equal(redact("Authorization: ******"), "[REDACTED]");
+  assert.equal(redact("Authorization: Bearer secret-token"), "[REDACTED]");
   assert.equal(redact({ command: "token=abc123" }).command, "[REDACTED]");
   assert.equal(redact("safe-value"), "safe-value");
 });

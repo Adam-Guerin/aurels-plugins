@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2
+
+- Add explicit local/remote modes, approval handoff, and telemetry lifecycle coverage.
+
 ## 0.2.1
 
 - Require HTTPS endpoints, bound remote responses, and flag all non-blocked local actions.

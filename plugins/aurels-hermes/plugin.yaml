@@ -1,6 +1,6 @@
 id: aurels-hermes
 name: Aurels for Hermes
-version: 0.2.1
+version: 0.2.2
 entrypoint: aurels_hermes.plugin:AurelsHermesPlugin
 capabilities:
   - before_action

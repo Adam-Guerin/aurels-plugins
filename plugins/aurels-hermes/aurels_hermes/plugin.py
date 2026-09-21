@@ -19,14 +19,11 @@ class AurelsHermesPlugin:
         register_hook = getattr(ctx, "register_hook", None)
         if not callable(register_hook):
             raise RuntimeError("Aurels Hermes requires a host with callable register_hook.")
-        register_hook("pre_tool_call", self.pre_tool_call)
-        post_hook = getattr(ctx, "supports_hook", None)
-        if callable(post_hook):
-            try:
-                if post_hook("post_tool_call"):
-                    register_hook("post_tool_call", self.post_tool_call)
-            except Exception:
-                pass
+        supported = getattr(ctx, "supported_hooks", None)
+        if supported is None or not {"pre_tool_call", "post_tool_call"}.issubset(set(supported)):
+            raise RuntimeError("Aurels Hermes requires pre_tool_call and post_tool_call host hooks.")
+        if register_hook("pre_tool_call", self.pre_tool_call) is not True or register_hook("post_tool_call", self.post_tool_call) is not True:
+            raise RuntimeError("Aurels Hermes host did not confirm hook registration.")
 
     def pre_tool_call(self, tool_name=None, args=None, task_id=None, tool_call_id=None, session_id=None, agent_id=None, **kwargs):
         arguments = args if isinstance(args, dict) else {}

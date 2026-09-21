@@ -39,18 +39,31 @@ class PluginTests(unittest.TestCase):
             "approve",
         )
 
-    def test_register_uses_native_pre_tool_hook(self):
+    def test_register_requires_and_confirms_both_native_hooks(self):
         class Host:
+            supported_hooks = {"pre_tool_call", "post_tool_call"}
+
             def __init__(self):
                 self.hooks = []
 
             def register_hook(self, name, handler):
                 self.hooks.append((name, handler))
+                return True
 
         host = Host()
         plugin = register(host)
-        self.assertEqual(host.hooks[0][0], "pre_tool_call")
+        self.assertEqual([name for name, _ in host.hooks], ["pre_tool_call", "post_tool_call"])
         self.assertIsInstance(plugin, AurelsHermesPlugin)
+
+    def test_register_fails_when_post_tool_hook_is_not_declared(self):
+        class Host:
+            supported_hooks = {"pre_tool_call"}
+
+            def register_hook(self, name, handler):
+                return True
+
+        with self.assertRaises(RuntimeError):
+            AurelsHermesPlugin({"api_key": "", "mode": "local"}, Client()).register(Host())
 
     def test_pre_tool_callback_accepts_keyword_contract(self):
         plugin = AurelsHermesPlugin({"api_key": "test", "mode": "remote"}, Client({"decision": "allow"}))
@@ -133,7 +146,7 @@ class PluginTests(unittest.TestCase):
         self.assertIsNone(client.events[1]["traceId"])
 
     def test_redacts_sensitive_values_embedded_in_strings(self):
-        self.assertEqual(redact("Authorization: ******"), "[REDACTED]")
+        self.assertEqual(redact("Authorization: Bearer secret-token"), "[REDACTED]")
         self.assertEqual(redact({"command": "token=abc123"})["command"], "[REDACTED]")
         self.assertEqual(redact("safe-value"), "safe-value")
 
