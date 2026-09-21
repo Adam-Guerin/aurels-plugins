@@ -39,31 +39,18 @@ class PluginTests(unittest.TestCase):
             "approve",
         )
 
-    def test_register_requires_and_confirms_both_native_hooks(self):
+    def test_register_registers_both_native_hooks(self):
         class Host:
-            supported_hooks = {"pre_tool_call", "post_tool_call"}
-
             def __init__(self):
                 self.hooks = []
 
             def register_hook(self, name, handler):
                 self.hooks.append((name, handler))
-                return True
 
         host = Host()
         plugin = register(host)
         self.assertEqual([name for name, _ in host.hooks], ["pre_tool_call", "post_tool_call"])
         self.assertIsInstance(plugin, AurelsHermesPlugin)
-
-    def test_register_fails_when_post_tool_hook_is_not_declared(self):
-        class Host:
-            supported_hooks = {"pre_tool_call"}
-
-            def register_hook(self, name, handler):
-                return True
-
-        with self.assertRaises(RuntimeError):
-            AurelsHermesPlugin({"api_key": "", "mode": "local"}, Client()).register(Host())
 
     def test_pre_tool_callback_accepts_keyword_contract(self):
         plugin = AurelsHermesPlugin({"api_key": "test", "mode": "remote"}, Client({"decision": "allow"}))
@@ -81,13 +68,13 @@ class PluginTests(unittest.TestCase):
         client = Client({"decision": "allow"})
         plugin = AurelsHermesPlugin({"api_key": "", "mode": "local", "telemetry_enabled": True}, client)
         plugin.before_action("exec", {"command": "rm -rf /"})
-        plugin.after_action("read_file", {"path": "README.md"}, {"action_id": "action-1"}, success=True)
+        plugin.after_action("read_file", {"path": "README.md"}, {"action_id": "action-1"}, status="success")
         self.assertEqual(client.events, [])
 
     def test_disabled_plugin_has_no_post_action_telemetry(self):
         client = Client({"decision": "allow"})
         plugin = AurelsHermesPlugin({"enabled": False, "api_key": "test", "mode": "remote", "telemetry_enabled": True}, client)
-        plugin.after_action("read_file", {"path": "README.md"}, {"action_id": "action-1"}, success=True)
+        plugin.after_action("read_file", {"path": "README.md"}, {"action_id": "action-1"}, status="success")
         self.assertEqual(client.events, [])
 
     def test_local_mode_blocks_destructive_commands_without_a_key(self):
@@ -140,8 +127,8 @@ class PluginTests(unittest.TestCase):
         client = Client({"decision": "allow", "traceId": "trace-123"})
         plugin = AurelsHermesPlugin({"api_key": "test", "mode": "remote", "telemetry_enabled": True}, client)
         plugin.before_action("read_file", {"path": "README.md"}, {"action_id": "trace-cleanup"})
-        plugin.after_action("read_file", {"path": "README.md"}, {"action_id": "trace-cleanup"})
-        plugin.after_action("read_file", {"path": "README.md"}, {"action_id": "trace-cleanup"})
+        plugin.after_action("read_file", {"path": "README.md"}, {"action_id": "trace-cleanup"}, status="success")
+        plugin.after_action("read_file", {"path": "README.md"}, {"action_id": "trace-cleanup"}, status="success")
         self.assertEqual(client.events[0]["traceId"], "trace-123")
         self.assertIsNone(client.events[1]["traceId"])
 
@@ -149,6 +136,20 @@ class PluginTests(unittest.TestCase):
         self.assertEqual(redact("Authorization: Bearer secret-token"), "[REDACTED]")
         self.assertEqual(redact({"command": "token=abc123"})["command"], "[REDACTED]")
         self.assertEqual(redact("safe-value"), "safe-value")
+
+    def test_status_parameter_drives_success(self):
+        client = Client({"decision": "allow"})
+        plugin = AurelsHermesPlugin({"api_key": "test", "mode": "remote", "telemetry_enabled": True}, client)
+        plugin.before_action("read_file", {"path": "README.md"}, {"action_id": "action-1"})
+        plugin.after_action("read_file", {"path": "README.md"}, {"action_id": "action-1"}, status="error")
+        self.assertEqual(client.events[0]["outcome"]["status"], "failure")
+
+    def test_redaction_handles_circular_structures(self):
+        circular = {"key": "value"}
+        circular["self"] = circular
+        result = redact(circular)
+        self.assertEqual(result["key"], "value")
+        self.assertEqual(result["self"], "[Circular]")
 
 
 if __name__ == "__main__":

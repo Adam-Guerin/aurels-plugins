@@ -32,10 +32,12 @@ guard = AurelsHermesPlugin()
 
 def run_tool(name, arguments, context):
     preflight = guard.before_action(name, arguments, context)
-    if not preflight["allow"]:
-        return {"status": "approval_required_or_blocked", "reason": preflight["reason"]}
-    result = execute_tool(name, preflight.get("arguments", arguments))
-    guard.after_action(name, arguments, {**context, "action_id": preflight["action_id"]}, success=True)
+    if preflight["action"] == "block":
+        return {"status": "blocked", "reason": preflight["message"]}
+    if preflight["action"] == "approve":
+        return {"status": "approval_required", "reason": preflight["message"]}
+    result = execute_tool(name, arguments)
+    guard.after_action(name, arguments, {**context, "action_id": preflight.get("action_id")}, status="success")
     return result
 ```
 
@@ -46,12 +48,12 @@ def run_tool(name, arguments, context):
 ```text
 AURELS_API_URL=https://www.aurels.dev
 AURELS_API_KEY=replace-with-a-scoped-plugin-key
-AURELS_FAIL_MODE=closed
+AURELS_MODE=remote
 AURELS_TIMEOUT_MS=1500
 AURELS_TELEMETRY_ENABLED=true
 ```
 
-You can instead pass a mapping to `AurelsHermesPlugin`, for example `{"api_key": runtime_secret, "fail_mode": "closed"}`. Runtime mapping values take precedence over the environment.
+You can instead pass a mapping to `AurelsHermesPlugin`, for example `{"api_key": runtime_secret, "mode": "remote"}`. Runtime mapping values take precedence over the environment.
 
 For fully offline use, leave `AURELS_API_KEY` empty. Local rules always run first: they block clearly destructive command patterns and return approval-required for every other action, including actions whose names merely look read-only. They are deliberately conservative and are not semantic analysis.
 
@@ -59,15 +61,15 @@ For fully offline use, leave `AURELS_API_KEY` empty. Local rules always run firs
 
 | Event | `before_action` result |
 | --- | --- |
-| Local deterministic `allow` | `allow: true`; execute the handler once without a model call. |
-| Local deterministic `block` | `allow: false`; a remote model cannot override it. |
+| Local deterministic `allow` | `{"action": "allow"}`; execute the handler once without a model call. |
+| Local deterministic `block` | `{"action": "block", "message": "..."}`; a remote model cannot override it. |
 | Ambiguous action | The configured model evaluates it and must return exactly `allow`, `flag`, or `block`. |
-| `allow` | `allow: true`; execute the handler once. |
-| `flag` | `allow: false`; do not execute; return approval-required to the caller. |
-| `block` | `allow: false`; do not execute. |
-| Timeout, DNS failure, 4xx/5xx, invalid response, or another model output | `flag`; `allow: false` and no execution. |
+| `allow` | `{"action": "allow"}`; execute the handler once. |
+| `flag` | `{"action": "approve", "message": "..."}`; do not execute; return approval-required to the caller. |
+| `block` | `{"action": "block", "message": "..."}`; do not execute. |
+| Timeout, DNS failure, 4xx/5xx, invalid response, or another model output | `{"action": "approve", "message": "..."}`; no execution. |
 
-The library never calls a protected handler itself. The hosting adapter must respect `allow: false`; the included tests exercise that security boundary. `AURELS_FAIL_MODE=open` is not an execution bypass in this release.
+The library never calls a protected handler itself. The hosting adapter must respect `{"action": "block"}`; the included tests exercise that security boundary.
 
 Remote mode requires an HTTPS API URL with no embedded credentials. Responses are limited to 1 MiB before JSON parsing.
 

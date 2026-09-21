@@ -19,11 +19,8 @@ class AurelsHermesPlugin:
         register_hook = getattr(ctx, "register_hook", None)
         if not callable(register_hook):
             raise RuntimeError("Aurels Hermes requires a host with callable register_hook.")
-        supported = getattr(ctx, "supported_hooks", None)
-        if supported is None or not {"pre_tool_call", "post_tool_call"}.issubset(set(supported)):
-            raise RuntimeError("Aurels Hermes requires pre_tool_call and post_tool_call host hooks.")
-        if register_hook("pre_tool_call", self.pre_tool_call) is not True or register_hook("post_tool_call", self.post_tool_call) is not True:
-            raise RuntimeError("Aurels Hermes host did not confirm hook registration.")
+        register_hook("pre_tool_call", self.pre_tool_call)
+        register_hook("post_tool_call", self.post_tool_call)
 
     def pre_tool_call(self, tool_name=None, args=None, task_id=None, tool_call_id=None, session_id=None, agent_id=None, **kwargs):
         arguments = args if isinstance(args, dict) else {}
@@ -35,7 +32,7 @@ class AurelsHermesPlugin:
         }
         return self.before_action(tool_name or kwargs.get("name") or "unknown", arguments, context)
 
-    def post_tool_call(self, tool_name=None, args=None, task_id=None, tool_call_id=None, session_id=None, agent_id=None, success=True, **kwargs):
+    def post_tool_call(self, tool_name=None, args=None, task_id=None, tool_call_id=None, session_id=None, agent_id=None, status=None, **kwargs):
         arguments = args if isinstance(args, dict) else {}
         context = {
             "task_id": task_id,
@@ -43,6 +40,7 @@ class AurelsHermesPlugin:
             "session_id": session_id or kwargs.get("session_id"),
             "agent_id": agent_id or kwargs.get("agent_id"),
         }
+        success = status is None or status == "success"
         self.after_action(tool_name or kwargs.get("name") or "unknown", arguments, context, success=success)
 
     def before_action(self, action_name, arguments=None, context=None):
@@ -86,9 +84,11 @@ class AurelsHermesPlugin:
         except Exception:
             return {"action": "approve", "message": APPROVAL_REQUIRED}
 
-    def after_action(self, action_name, arguments=None, context=None, success=True):
+    def after_action(self, action_name, arguments=None, context=None, success=True, status=None):
         context = context or {}
         action_id = context.get("action_id", "unknown")
+        if status is not None:
+            success = status == "success"
         try:
             self._telemetry(action_id, action_name, arguments, context, "success" if success else "failure")
         finally:

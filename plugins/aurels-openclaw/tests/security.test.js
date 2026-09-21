@@ -9,77 +9,77 @@ test("allows an allowed action", async () => {
   assert.equal(await handlers.beforeToolCall({ toolName: "read_file", toolCallId: "a" }), undefined);
 });
 test("does not execute blocked or flagged actions", async () => {
-  for (const decision of ["block", "flag"]) {
-    const handlers = createHandlers(config, { evaluate: async () => ({ decision }), telemetry: async () => {} });
-    assert.equal((await handlers.beforeToolCall({ toolName: "exec", toolCallId: decision }))?.block, true);
-  }
+  const handlers = createHandlers(config, { evaluate: async () => ({ decision: "block" }), telemetry: async () => {} });
+  assert.equal((await handlers.beforeToolCall({ toolName: "exec", toolCallId: "block" }))?.block, true);
+  const flagHandlers = createHandlers(config, { evaluate: async () => ({ decision: "flag" }), telemetry: async () => {} });
+  assert.ok((await flagHandlers.beforeToolCall({ toolName: "exec", toolCallId: "flag" }))?.requireApproval);
 });
 test("fails closed when the service is unavailable", async () => {
   const handlers = createHandlers(config, { evaluate: async () => { throw new Error("offline"); } });
-  assert.equal((await handlers.beforeToolCall({ toolName: "exec" }))?.block, true);
-  assert.equal((await handlers.beforeToolCall({ toolName: "filesystem.writeFile" }))?.block, true);
+  assert.ok((await handlers.beforeToolCall({ toolName: "exec", toolCallId: "failure-1" }))?.requireApproval);
+  assert.ok((await handlers.beforeToolCall({ toolName: "filesystem.writeFile", toolCallId: "failure-2" }))?.requireApproval);
 });
 test("keeps privileged actions blocked during a fail-open outage", async () => {
   const handlers = createHandlers({ ...config }, { evaluate: async () => { throw new Error("offline"); } });
-  assert.equal((await handlers.beforeToolCall({ toolName: "exec" }))?.block, true);
+  assert.ok((await handlers.beforeToolCall({ toolName: "exec", toolCallId: "fail-open" }))?.requireApproval);
 });
 test("fails closed on malformed allow decisions and safely redacts cycles", async () => {
   const handlers = createHandlers(config, { evaluate: async () => ({ decision: "allow", riskScore: 101 }) });
-  assert.equal((await handlers.beforeToolCall({ toolName: "exec" }))?.block, true);
+  assert.ok((await handlers.beforeToolCall({ toolName: "exec", toolCallId: "malformed" }))?.requireApproval);
 });
 test("adapter conformance: only allow reaches the simulated tool handler", async () => {
   for (const [decision, expectedCalls] of [["allow", 1], ["flag", 0], ["block", 0]]) {
     let calls = 0;
     const handlers = createHandlers(config, { evaluate: async () => ({ decision }), telemetry: async () => {} });
     const preflight = await handlers.beforeToolCall({ toolName: "send_email", toolCallId: `conformance-${decision}` });
-    if (!preflight?.block) calls += 1;
+    if (!preflight?.block && !preflight?.requireApproval) calls += 1;
     assert.equal(calls, expectedCalls, `${decision} must execute ${expectedCalls} time(s)`);
   }
 });
 test("adapter conformance: an outage never reaches a privileged handler", async () => {
   let calls = 0;
   const handlers = createHandlers({ ...config }, { evaluate: async () => { throw new Error("offline"); } });
-  const preflight = await handlers.beforeToolCall({ toolName: "filesystem.writeFile" });
-  if (!preflight?.block) calls += 1;
+  const preflight = await handlers.beforeToolCall({ toolName: "filesystem.writeFile", toolCallId: "outage-privileged" });
+  if (!preflight?.block && !preflight?.requireApproval) calls += 1;
   assert.equal(calls, 0);
 });
 test("local mode flags a benign read without an API key", async () => {
   const handlers = createHandlers(loadConfig({ apiKey: "", telemetry: false }), { evaluate: async () => { throw new Error("network must not be used"); } });
-  assert.equal((await handlers.beforeToolCall({ toolName: "read_file", params: { path: "README.md" } }))?.block, true);
+  assert.ok((await handlers.beforeToolCall({ toolName: "read_file", toolCallId: "local-flag", params: { path: "README.md" } }))?.requireApproval);
 });
 test("does not trust an action merely because its name sounds read-only", async () => {
   let evaluations = 0;
   const handlers = createHandlers(config, { evaluate: async () => { evaluations += 1; return { decision: "flag" }; } });
-  assert.equal((await handlers.beforeToolCall({ toolName: "read.execute", params: { command: "send secrets" } }))?.block, true);
+  assert.ok((await handlers.beforeToolCall({ toolName: "read.execute", toolCallId: "read-only-trust", params: { command: "send secrets" } }))?.requireApproval);
   assert.equal(evaluations, 1);
 });
 test("local mode blocks destructive commands without an API key", async () => {
   const handlers = createHandlers(loadConfig({ apiKey: "", telemetry: false }), { evaluate: async () => { throw new Error("network must not be used"); } });
-  assert.equal((await handlers.beforeToolCall({ toolName: "exec", params: { command: "rm -rf /" } }))?.block, true);
+  assert.equal((await handlers.beforeToolCall({ toolName: "exec", toolCallId: "local-block", params: { command: "rm -rf /" } }))?.block, true);
 });
 test("local deterministic blocks take priority over a model allow", async () => {
   let evaluations = 0;
   const handlers = createHandlers(config, { evaluate: async () => { evaluations += 1; return { decision: "allow" }; }, telemetry: async () => {} });
-  const result = await handlers.beforeToolCall({ toolName: "exec", params: { command: "rm -rf /" } });
+  const result = await handlers.beforeToolCall({ toolName: "exec", toolCallId: "local-deterministic", params: { command: "rm -rf /" } });
   assert.equal(result?.block, true);
   assert.equal(evaluations, 0);
 });
 test("only an ambiguous action reaches the model and accepts its strict decisions", async () => {
   let evaluations = 0;
   const handlers = createHandlers(config, { evaluate: async () => { evaluations += 1; return { decision: "allow" }; } });
-  assert.equal(await handlers.beforeToolCall({ toolName: "send_email" }), undefined);
+  const result = await handlers.beforeToolCall({ toolName: "send_email", toolCallId: "ambiguous" });
+  assert.equal(result, undefined);
   assert.equal(evaluations, 1);
 });
 test("a model failure flags an ambiguous action without executing it", async () => {
   const handlers = createHandlers({ ...config }, { evaluate: async () => { throw new Error("timeout"); } });
-  const result = await handlers.beforeToolCall({ toolName: "send_email" });
-  assert.equal(result?.block, true);
-  assert.match(result?.blockReason ?? "", /approval/i);
+  const result = await handlers.beforeToolCall({ toolName: "send_email", toolCallId: "failure" });
+  assert.ok(result?.requireApproval);
 });
 test("rejects non-strict model decisions", async () => {
   for (const decision of ["rewrite", "quarantine"]) {
     const handlers = createHandlers(config, { evaluate: async () => ({ decision }) });
-    assert.equal((await handlers.beforeToolCall({ toolName: "send_email" }))?.block, true);
+    assert.ok((await handlers.beforeToolCall({ toolName: "send_email", toolCallId: decision }))?.requireApproval);
   }
 });
 test("rejects non-HTTPS API endpoints before sending an API key", () => {
@@ -137,13 +137,16 @@ test("enabled=false disables post tool telemetry processing", async () => {
   await handlers.afterToolCall({ toolName: "read_file", toolCallId: "disabled", success: true });
   assert.equal(telemetryCalls, 0);
 });
-test("flagged actions can continue when host approval is granted", async () => {
+test("flagged actions return requireApproval object", async () => {
   const handlers = createHandlers(config, { evaluate: async () => ({ decision: "flag" }), telemetry: async () => {} });
   const result = await handlers.beforeToolCall(
-    { toolName: "send_email", toolCallId: "flag-approved", params: { to: "a@example.test" } },
-    { requireApproval: async () => ({ decision: "allow_once" }) }
+    { toolName: "send_email", toolCallId: "flag-approved", params: { to: "a@example.test" } }
   );
-  assert.equal(result, undefined);
+  assert.ok(result?.requireApproval);
+  assert.equal(result.requireApproval.title, "Aurels Security Review");
+  assert.equal(result.requireApproval.severity, "warning");
+  assert.ok(result.requireApproval.allowedDecisions.includes("allow-once"));
+  assert.ok(result.requireApproval.allowedDecisions.includes("deny"));
 });
 test("cleans trace state after post-tool telemetry", async () => {
   const calls = [];

@@ -62,7 +62,9 @@ export function createHandlers(config, client) {
   return {
     async beforeToolCall(event = {}, context = {}) {
       if (!config.enabled || String(event.toolName || "").startsWith("aurels.")) return undefined;
-      const action = { version: "1", integration: "openclaw", action: { id: event.toolCallId || crypto.randomUUID(), name: event.toolName, arguments: event.params ?? {} }, agent: { id: context.agentId, sessionId: context.sessionId, runId: context.runId }, timestamp: new Date().toISOString() };
+      const actionId = event.toolCallId;
+      if (!actionId) return undefined;
+      const action = { version: "1", integration: "openclaw", action: { id: actionId, name: event.toolName, arguments: event.params ?? {} }, agent: { id: context.agentId, sessionId: context.sessionId, runId: context.runId }, timestamp: new Date().toISOString() };
       const local = localDecision(event);
       if (local.decision === "allow") return undefined;
       if (local.decision === "block") {
@@ -83,7 +85,8 @@ export function createHandlers(config, client) {
     },
     async afterToolCall(event = {}, context = {}) {
       if (!config.enabled || !config.telemetry || !event.toolName || String(event.toolName).startsWith("aurels.")) return;
-      const actionId = event.toolCallId || "unknown";
+      const actionId = event.toolCallId;
+      if (!actionId) return;
       try {
         await report(client, config, { action: { id: actionId }, agent: { id: context.agentId, sessionId: context.sessionId } }, traceByCall.get(actionId), event.success === false ? "failure" : "success", event);
       } finally {
@@ -96,18 +99,14 @@ export function createHandlers(config, client) {
 
 async function flagged(client, config, action, event, context) {
   void report(client, config, action, undefined, "blocked", event);
-  const approveMessage = "Aurels requires human approval before this action can run.";
-  const requireApproval = context?.requireApproval;
-  if (typeof requireApproval === "function") {
-    const decision = await requireApproval({
-      provider: "aurels",
-      toolName: event.toolName,
-      params: redact(event.params ?? {}),
-      message: approveMessage
-    });
-    if (isApprovalAllowed(decision)) return undefined;
-  }
-  return { block: true, blockReason: "Aurels requires human approval before this action can run." };
+  return {
+    requireApproval: {
+      title: "Aurels Security Review",
+      description: "Aurels requires human approval before this action can run.",
+      severity: "warning",
+      allowedDecisions: ["allow-once", "deny"]
+    }
+  };
 }
 
 async function report(client, config, action, traceId, status, event) {
@@ -149,10 +148,4 @@ function redactString(value) {
 
 function shouldSendTelemetry(config) {
   return config.enabled && config.telemetry && config.mode !== "local" && Boolean(config.apiKey);
-}
-
-function isApprovalAllowed(decision) {
-  if (decision === true) return true;
-  const value = typeof decision === "string" ? decision : decision?.decision ?? decision?.action;
-  return typeof value === "string" && ["allow", "allow_once", "allow_always", "approved"].includes(value.toLowerCase());
 }

@@ -20,7 +20,15 @@ const manifest = { schema: 1, generatedAt, commit, plugins: entries };
 await writeFile(join(dist, "MANIFEST.json"), JSON.stringify(manifest, null, 2) + "\n");
 await writeFile(join(dist, "SHA256SUMS"), entries.map((entry) => `${entry.sha256}  ${entry.path}`).join("\n") + "\n");
 await writeFile(join(dist, "PROVENANCE.json"), JSON.stringify({ schema: 1, repository: "https://github.com/Adam-Guerin/aurels-plugins", commit, workflow: "GitHub Actions release-artifacts", generatedAt: manifest.generatedAt }, null, 2) + "\n");
-await writeFile(join(dist, "SBOM.spdx.json"), JSON.stringify({ SPDXID: "SPDXRef-DOCUMENT", spdxVersion: "SPDX-2.3", name: "aurels-plugins", documentNamespace: `https://github.com/Adam-Guerin/aurels-plugins/releases/${commit}`, creationInfo: { created: manifest.generatedAt, creators: ["Tool: aurels release manifest"] }, packages: ["aurels-openclaw", "aurels-hermes"].map((name) => ({ SPDXID: `SPDXRef-${name}`, name, versionInfo: "0.2.2", downloadLocation: "NOASSERTION", licenseConcluded: "MIT" })) }, null, 2) + "\n");
+
+const openclawVersion = JSON.parse(await readFile(join(root, "plugins", "aurels-openclaw", "package.json"), "utf8")).version;
+const hermesPyproject = await readFile(join(root, "plugins", "aurels-hermes", "pyproject.toml"), "utf8");
+const hermesVersion = hermesPyproject.match(/version\s*=\s*["']([^"']+)["']/)?.[1] || "0.0.0";
+if (openclawVersion !== hermesVersion) {
+  console.error(`Version mismatch: openclaw=${openclawVersion}, hermes=${hermesVersion}`);
+  process.exit(1);
+}
+await writeFile(join(dist, "SBOM.spdx.json"), JSON.stringify({ SPDXID: "SPDXRef-DOCUMENT", spdxVersion: "SPDX-2.3", name: "aurels-plugins", documentNamespace: `https://github.com/Adam-Guerin/aurels-plugins/releases/${commit}`, dataLicense: "CC0-1.0", creationInfo: { created: manifest.generatedAt, creators: ["Tool: aurels release manifest"] }, packages: [{ SPDXID: "SPDXRef-aurels-openclaw", name: "aurels-openclaw", versionInfo: openclawVersion, downloadLocation: "NOASSERTION", licenseConcluded: "MIT" }, { SPDXID: "SPDXRef-aurels-hermes", name: "aurels-hermes", versionInfo: hermesVersion, downloadLocation: "NOASSERTION", licenseConcluded: "MIT" }] }, null, 2) + "\n");
 console.log(`Release metadata generated for ${entries.length} files at ${dist}`);
 
 async function collect(path, output) {

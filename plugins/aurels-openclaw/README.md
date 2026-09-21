@@ -27,7 +27,7 @@ Copy `.env.example` to your secret manager or environment. Use a dedicated key l
 ```text
 AURELS_API_URL=https://www.aurels.dev
 AURELS_API_KEY=replace-with-a-scoped-plugin-key
-AURELS_FAIL_MODE=closed
+AURELS_MODE=remote
 AURELS_TIMEOUT_MS=1500
 AURELS_TELEMETRY_ENABLED=true
 ```
@@ -46,7 +46,7 @@ Leave `AURELS_API_KEY` empty and set `AURELS_MODE=local` for offline use. Local 
 | `block` | Tool does not execute. |
 | Timeout, network failure, 4xx/5xx, invalid JSON, or another model output | `flag`: tool does not execute and requires human approval. |
 
-OpenClaw 2026.3.2 does not consume an approval directive in the documented pre-tool hook, so `flag` is deliberately returned as a block. `AURELS_FAIL_MODE=open` is not an execution bypass in this release.
+OpenClaw 2026.3.2+ properly handles the approval directive returned by Aurels.
 
 Remote mode requires an HTTPS API URL with no embedded credentials. Responses are limited to 1 MiB before JSON parsing.
 

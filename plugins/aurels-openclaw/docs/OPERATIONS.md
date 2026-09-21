@@ -2,7 +2,7 @@
 
 ## Safe rollout
 
-1. Start in a non-production workspace with `AURELS_FAIL_MODE=closed`.
+1. Start in a non-production workspace with `AURELS_MODE=remote`.
 2. Run `npm test` and confirm `openclaw plugins doctor` finds the plugin.
 3. Execute one benign tool call and one policy-blocked tool call. Confirm the blocked handler never runs.
 4. Observe telemetry without enabling result collection or placing secrets in tool arguments.
@@ -10,7 +10,7 @@
 
 ## Failures
 
-API outages, DNS failures, timeout, malformed responses, oversized responses, and unexpected decisions always flag and block execution. `AURELS_FAIL_MODE=open` is retained only for configuration compatibility; it is not an execution bypass.
+API outages, DNS failures, timeout, malformed responses, oversized responses, and unexpected decisions always flag and block execution.
 
 Remote endpoints must use HTTPS and must not contain embedded credentials. Response bodies are capped at 1 MiB before parsing.
 

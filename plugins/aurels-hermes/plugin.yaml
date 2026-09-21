@@ -1,10 +1,10 @@
-id: aurels-hermes
-name: Aurels for Hermes
+name: aurels-hermes
 version: 0.2.2
-entrypoint: aurels_hermes.plugin:AurelsHermesPlugin
-capabilities:
-  - before_action
-  - after_action
+description: Aurels security policy enforcement for Hermes agent tool calls
+entrypoint: aurels_hermes:register
+provides_hooks:
+  - pre_tool_call
+  - post_tool_call
 configuration:
   - enabled
   - api_url

@@ -2,7 +2,7 @@
 
 ## Safe rollout
 
-1. Install in a non-production Hermes environment with `AURELS_FAIL_MODE=closed`.
+1. Install in a non-production Hermes environment with `AURELS_MODE=remote`.
 2. Run `python -m unittest discover -s tests`.
 3. Test an allowed action and a known blocked action. Assert that the action handler is not called in the blocked case.
 4. Verify telemetry does not contain keys or values that should remain local.
@@ -10,7 +10,7 @@
 
 ## Failure handling
 
-Any unavailable, malformed, oversized, or non-success Aurels response becomes `allow: false`; no action should run. `fail_mode=open` is retained only for configuration compatibility and does not permit execution after a failure.
+Any unavailable, malformed, oversized, or non-success Aurels response becomes `{"action": "approve", "message": "..."}`; no action should run.
 
 Remote endpoints must use HTTPS and must not contain embedded credentials. Response bodies are capped at 1 MiB before parsing.
 

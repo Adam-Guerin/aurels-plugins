@@ -3,6 +3,9 @@
   "name": "Aurels Security",
   "version": "0.2.2",
   "description": "Pre-execution Aurels policy enforcement for OpenClaw tool calls.",
+  "activation": {
+    "onCapabilities": ["hook"]
+  },
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
