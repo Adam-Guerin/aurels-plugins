@@ -6,8 +6,9 @@ capabilities:
   - before_action
   - after_action
 configuration:
+  - enabled
   - api_url
   - api_key
-  - fail_mode
+  - mode
   - timeout_ms
   - telemetry_enabled

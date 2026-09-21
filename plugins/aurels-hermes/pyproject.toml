@@ -10,5 +10,8 @@ requires-python = ">=3.11"
 license = {text = "MIT"}
 readme = "README.md"
 
+[project.entry-points."hermes_agent.plugins"]
+aurels-hermes = "aurels_hermes:register"
+
 [tool.setuptools]
 packages = ["aurels_hermes"]
