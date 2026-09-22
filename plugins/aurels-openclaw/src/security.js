@@ -49,8 +49,7 @@ export function createClient(config, fetchImpl = globalThis.fetch) {
       if (!response.ok) throw new Error(`Aurels returned HTTP ${response.status}`);
       const declaredLength = Number(response.headers?.get?.("content-length"));
       if (Number.isFinite(declaredLength) && declaredLength > MAX_RESPONSE_BYTES) throw new Error("Aurels response exceeds the maximum allowed size.");
-      const body = await response.text();
-      if (new TextEncoder().encode(body).byteLength > MAX_RESPONSE_BYTES) throw new Error("Aurels response exceeds the maximum allowed size.");
+      const body = await readLimitedText(response);
       return JSON.parse(body);
     } finally { clearTimeout(timer); }
   }
@@ -62,8 +61,9 @@ export function createHandlers(config, client) {
   return {
     async beforeToolCall(event = {}, context = {}) {
       if (!config.enabled || String(event.toolName || "").startsWith("aurels.")) return undefined;
-      const actionId = event.toolCallId;
-      if (!actionId) return undefined;
+      // toolCallId is optional in OpenClaw. Its absence must never become an
+      // implicit allow: use a fresh action identity for this preflight.
+      const actionId = event.toolCallId || crypto.randomUUID();
       const action = { version: "1", integration: "openclaw", action: { id: actionId, name: event.toolName, arguments: event.params ?? {} }, agent: { id: context.agentId, sessionId: context.sessionId, runId: context.runId }, timestamp: new Date().toISOString() };
       const local = localDecision(event);
       if (local.decision === "allow") return undefined;
@@ -95,6 +95,29 @@ export function createHandlers(config, client) {
     },
     status: () => ({ enabled: config.enabled, mode: config.mode, telemetry: config.telemetry })
   };
+}
+
+async function readLimitedText(response) {
+  if (!response.body?.getReader) {
+    const body = await response.text();
+    if (new TextEncoder().encode(body).byteLength > MAX_RESPONSE_BYTES) throw new Error("Aurels response exceeds the maximum allowed size.");
+    return body;
+  }
+  const reader = response.body.getReader();
+  const chunks = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_RESPONSE_BYTES) { await reader.cancel(); throw new Error("Aurels response exceeds the maximum allowed size."); }
+      chunks.push(value);
+    }
+  } finally { reader.releaseLock(); }
+  const bytes = new Uint8Array(total); let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  return new TextDecoder().decode(bytes);
 }
 
 async function flagged(client, config, action, event, context) {

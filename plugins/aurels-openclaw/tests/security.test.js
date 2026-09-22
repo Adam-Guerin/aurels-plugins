@@ -8,6 +8,15 @@ test("allows an allowed action", async () => {
   const handlers = createHandlers(config, { evaluate: async () => ({ decision: "allow" }) });
   assert.equal(await handlers.beforeToolCall({ toolName: "read_file", toolCallId: "a" }), undefined);
 });
+test("evaluates an action when OpenClaw omits its optional toolCallId", async () => {
+  let evaluations = 0;
+  const handlers = createHandlers(config, { evaluate: async () => { evaluations += 1; return { decision: "block" }; }, telemetry: async () => {} });
+  assert.equal((await handlers.beforeToolCall({ toolName: "exec", params: { command: "rm -rf /" } }))?.block, true);
+  assert.equal(evaluations, 0, "local deterministic blocking remains the first boundary");
+  const ambiguous = await handlers.beforeToolCall({ toolName: "send_email", params: { to: "x@example.test" } });
+  assert.equal(ambiguous?.block, true);
+  assert.equal(evaluations, 1);
+});
 test("does not execute blocked or flagged actions", async () => {
   const handlers = createHandlers(config, { evaluate: async () => ({ decision: "block" }), telemetry: async () => {} });
   assert.equal((await handlers.beforeToolCall({ toolName: "exec", toolCallId: "block" }))?.block, true);

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aurels-hermes"
-version = "0.2.2"
+version = "0.2.3"
 description = "Independent Aurels preflight guard for Hermes actions."
 requires-python = ">=3.11"
 license = {text = "MIT"}
