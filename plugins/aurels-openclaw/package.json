@@ -1,5 +1,5 @@
 {
-  "name": "@aurels/openclaw-plugin",
+  "name": "@aurels/aurels",
   "version": "0.2.4",
   "description": "Independent Aurels security hook for OpenClaw tool calls.",
   "type": "module",
@@ -11,7 +11,7 @@
     "check": "node --check src/index.js && node --check src/security.js"
   },
   "peerDependencies": {
-    "openclaw": ">=2026.3.2"
+    "openclaw": ">=2026.3.28"
   },
   "openclaw": {
     "extensions": ["./src/index.js"]

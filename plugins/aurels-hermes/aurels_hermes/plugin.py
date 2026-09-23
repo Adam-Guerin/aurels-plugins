@@ -45,7 +45,7 @@ class AurelsHermesPlugin:
 
     def before_action(self, action_name, arguments=None, context=None):
         context = context or {}
-        if not self.config.enabled or str(action_name or "").startswith("aurels."):
+        if not self.config.enabled:
             return {"action": "allow"}
         action_id = context.get("action_id") or str(uuid4())
         action = {

@@ -6,9 +6,9 @@
 
 | Component | Supported version |
 | --- | --- |
-| Plugin | 0.2.2 |
+| Plugin | 0.2.4 |
 | Node.js | 20 or newer |
-| OpenClaw | 2026.3.2 or newer, with `before_tool_call` and `after_tool_call` hooks |
+| OpenClaw | 2026.3.28 or newer, with `before_tool_call`, `after_tool_call` hooks and `requireApproval` support |
 | Aurels API | `/api/v1/actions/evaluate` and `/api/v1/actions/telemetry` |
 
 ## Install

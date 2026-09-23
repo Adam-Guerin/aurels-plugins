@@ -11,7 +11,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate marketplace JSON
-        run: python -m json.tool marketplace.json > /dev/null
+        run: |
+          python -m json.tool marketplace.json > /dev/null
+          python -m json.tool .agents/plugins/marketplace.json > /dev/null
       - name: Validate plugin manifests
         shell: bash
         run: |
@@ -29,3 +31,5 @@ jobs:
         run: python -m unittest discover -s tests
       - name: Generate reproducible release metadata
         run: npm run release:manifest
+      - name: Build Ollama download archive
+        run: npm run package:ollama

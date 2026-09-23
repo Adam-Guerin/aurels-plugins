@@ -14,7 +14,13 @@ test("evaluates an action when OpenClaw omits its optional toolCallId", async ()
   assert.equal((await handlers.beforeToolCall({ toolName: "exec", params: { command: "rm -rf /" } }))?.block, true);
   assert.equal(evaluations, 0, "local deterministic blocking remains the first boundary");
   const ambiguous = await handlers.beforeToolCall({ toolName: "send_email", params: { to: "x@example.test" } });
-  assert.equal(ambiguous?.block, true);
+  assert.ok(ambiguous?.requireApproval);
+});
+test("evaluates an Aurels-prefixed tool instead of trusting its name", async () => {
+  let evaluations = 0;
+  const handlers = createHandlers(config, { evaluate: async () => { evaluations += 1; return { decision: "block" }; }, telemetry: async () => {} });
+  const result = await handlers.beforeToolCall({ toolName: "aurels.exec", toolCallId: "prefix-bypass" });
+  assert.equal(result?.block, true);
   assert.equal(evaluations, 1);
 });
 test("does not execute blocked or flagged actions", async () => {
@@ -73,6 +79,12 @@ test("local deterministic blocks take priority over a model allow", async () => 
   assert.equal(result?.block, true);
   assert.equal(evaluations, 0);
 });
+
+test("blocks destructive commands even without toolCallId", async () => {
+  const handlers = createHandlers(loadConfig({ apiKey: "", telemetry: false }), { evaluate: async () => { throw new Error("network must not be used"); } });
+  const result = await handlers.beforeToolCall({ toolName: "exec", params: { command: "rm -rf /" } });
+  assert.equal(result?.block, true);
+});
 test("only an ambiguous action reaches the model and accepts its strict decisions", async () => {
   let evaluations = 0;
   const handlers = createHandlers(config, { evaluate: async () => { evaluations += 1; return { decision: "allow" }; } });
@@ -102,6 +114,16 @@ test("bounds remote response bodies before parsing JSON", async () => {
     text: async () => "x".repeat(1024 * 1024 + 1)
   }));
   await assert.rejects(() => client.evaluate({ action: { id: "a" } }), /response exceeds/i);
+});
+test("binds evaluation idempotency keys to evaluated arguments", async () => {
+  const keys = [];
+  const client = createClient(loadConfig({ apiUrl: "https://example.test", apiKey: "test" }), async (_url, init) => {
+    keys.push(new Headers(init.headers).get("idempotency-key"));
+    return { ok: true, headers: new Headers(), text: async () => JSON.stringify({ decision: "allow" }) };
+  });
+  await client.evaluate({ action: { id: "same-call", name: "exec", arguments: { command: "echo safe" } } });
+  await client.evaluate({ action: { id: "same-call", name: "exec", arguments: { command: "rm -rf /" } } });
+  assert.notEqual(keys[0], keys[1]);
 });
 test("fails startup when OpenClaw only exposes the legacy hook registrar", () => {
   const api = {

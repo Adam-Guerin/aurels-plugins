@@ -33,6 +33,7 @@ jobs:
         run: npm pack
       - name: Generate release metadata for built archives
         run: |
+          npm run package:ollama
           npm run release:manifest
           sha256sum plugins/aurels-hermes/dist/* plugins/aurels-openclaw/*.tgz >> dist/SHA256SUMS
       - uses: sigstore/cosign-installer@v3
@@ -46,6 +47,7 @@ jobs:
             dist/*
             plugins/aurels-hermes/dist/*
             plugins/aurels-openclaw/*.tgz
+            dist/aurels-ollama-plugin.zip
       - name: Publish to npm (if token available)
         working-directory: plugins/aurels-openclaw
         env:

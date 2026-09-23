@@ -1,9 +1,17 @@
 import json
+import hashlib
 from urllib.parse import urlparse, urlunparse, quote
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.request import Request, HTTPRedirectHandler, build_opener
 
 MAX_RESPONSE_BYTES = 1024 * 1024
+
+
+class _RejectRedirects(HTTPRedirectHandler):
+    """Do not forward an authenticated request to a redirect target."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
 class AurelsClient:
     def __init__(self, config):
@@ -27,7 +35,7 @@ class AurelsClient:
             method="POST",
         )
         try:
-            with urlopen(request, timeout=self.config.timeout_ms / 1000) as response:
+            with build_opener(_RejectRedirects()).open(request, timeout=self.config.timeout_ms / 1000) as response:
                 if response.status < 200 or response.status >= 300:
                     raise RuntimeError(f"Aurels returned HTTP {response.status}")
                 body = response.read(MAX_RESPONSE_BYTES + 1)
@@ -41,4 +49,9 @@ class AurelsClient:
     def _idempotency_key(path, payload):
         action_id = payload.get("action", {}).get("id") if path.endswith("/evaluate") else payload.get("actionId")
         status = payload.get("outcome", {}).get("status", "")
-        return f"{'action-evaluate' if path.endswith('/evaluate') else 'action-telemetry'}:{quote(str(action_id or 'unknown'), safe='')}" + (f":{status}" if status else "")
+        prefix = "action-evaluate" if path.endswith("/evaluate") else "action-telemetry"
+        if path.endswith("/evaluate"):
+            serialized = json.dumps(payload.get("action", {}), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+            fingerprint = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+            return f"{prefix}:{quote(str(action_id or 'unknown'), safe='')}:{fingerprint}"
+        return f"{prefix}:{quote(str(action_id or 'unknown'), safe='')}" + (f":{status}" if status else "")

@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import patch
+from urllib.error import HTTPError
 
 from aurels_hermes import register
 from aurels_hermes.client import AurelsClient
@@ -27,6 +28,10 @@ class PluginTests(unittest.TestCase):
     def test_allow(self):
         plugin = AurelsHermesPlugin({"api_key": "test", "mode": "remote"}, Client({"decision": "allow"}))
         self.assertEqual(plugin.before_action("read_file")["action"], "allow")
+
+    def test_aurels_prefixed_tools_are_evaluated(self):
+        plugin = AurelsHermesPlugin({"api_key": "test", "mode": "remote"}, Client({"decision": "block"}))
+        self.assertEqual(plugin.before_action("aurels.exec")["action"], "block")
 
     def test_flag_and_block_do_not_execute(self):
         for decision in ("flag", "block"):
@@ -119,9 +124,32 @@ class PluginTests(unittest.TestCase):
                 return False
 
         response = Response()
-        with patch("aurels_hermes.client.urlopen", return_value=response):
+        with patch("aurels_hermes.client.build_opener") as build_opener:
+            build_opener.return_value.open.return_value = response
             self.assertEqual(AurelsClient(Config(enabled=True, api_url="https://www.aurels.dev", api_key="test", mode="remote")).evaluate({"action": {"id": "a"}}), {})
         self.assertEqual(response.read_limit, 1024 * 1024 + 1)
+
+    def test_client_rejects_redirects_without_following_them(self):
+        class Opener:
+            def __init__(self):
+                self.requests = []
+
+            def open(self, request, timeout):
+                self.requests.append(request)
+                raise HTTPError(request.full_url, 303, "See Other", {}, None)
+
+        opener = Opener()
+        client = AurelsClient(Config(enabled=True, api_url="https://www.aurels.dev", api_key="test-key", mode="remote"))
+        with patch("aurels_hermes.client.build_opener", return_value=opener):
+            with self.assertRaises(RuntimeError):
+                client.evaluate({"action": {"id": "redirect"}})
+        self.assertEqual(len(opener.requests), 1)
+        self.assertEqual(opener.requests[0].get_header("X-api-key"), "test-key")
+
+    def test_client_binds_idempotency_key_to_evaluated_arguments(self):
+        left = AurelsClient._idempotency_key("/api/v1/actions/evaluate", {"action": {"id": "same-call", "arguments": {"command": "echo safe"}}})
+        right = AurelsClient._idempotency_key("/api/v1/actions/evaluate", {"action": {"id": "same-call", "arguments": {"command": "rm -rf /"}}})
+        self.assertNotEqual(left, right)
 
     def test_trace_cleanup_after_after_action(self):
         client = Client({"decision": "allow", "traceId": "trace-123"})

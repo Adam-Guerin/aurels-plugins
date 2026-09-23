@@ -5,10 +5,13 @@ import { execFileSync } from "node:child_process";
 
 const root = resolve(import.meta.dirname, "..");
 const dist = join(root, "dist");
-await rm(dist, { recursive: true, force: true });
 await mkdir(dist, { recursive: true });
+await Promise.all(["MANIFEST.json", "SHA256SUMS", "PROVENANCE.json", "SBOM.spdx.json"].map((file) => rm(join(dist, file), { force: true })));
 const files = [];
 for (const plugin of await readdir(join(root, "plugins"))) await collect(join(root, "plugins", plugin), files);
+for (const file of await readdir(dist)) {
+  if (file.endsWith(".zip") || file.endsWith(".tgz") || file.endsWith(".whl") || file.endsWith(".tar.gz")) files.push(join(dist, file));
+}
 const entries = [];
 for (const file of files.sort()) {
   const bytes = await readFile(file);

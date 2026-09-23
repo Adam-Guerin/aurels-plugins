@@ -1,11 +1,12 @@
 # Aurels Plugins
 
-Open-source plugins maintained by Aurels for the OpenClaw and Hermes ecosystems.
+Open-source, downloadable integrations maintained by Aurels.
 
 ## Available plugins
 
 - **Aurels for OpenClaw** — integration package for OpenClaw.
 - **Aurels for Hermes** — integration package for Hermes.
+- **Aurels for Ollama** — local security-analysis model preset, installable through the Codex marketplace or release archive.
 
 Each plugin is self-contained in `plugins/`, with its executable source, tests, configuration example, release notes, and operating documentation. No code from the Aurels web application is required to run either package.
 
@@ -15,6 +16,7 @@ Each plugin is self-contained in `plugins/`, with its executable source, tests, 
 plugins/
   aurels-openclaw/
   aurels-hermes/
+  aurels-ollama/
 ```
 
 Start with the documentation inside the package you want to install:

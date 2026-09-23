@@ -1,0 +1,17 @@
+{
+  "name": "aurels-ollama",
+  "version": "0.2.4+codex.20260923150441",
+  "description": "Aurels local security-analysis model preset for Ollama.",
+  "author": {
+    "name": "Aurels"
+  },
+  "interface": {
+    "displayName": "Aurels Ollama",
+    "shortDescription": "Install Aurels' local Ollama model preset.",
+    "longDescription": "Provides a deterministic local security-analysis model preset for Ollama.",
+    "developerName": "Aurels",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "Show me how to create and run the Aurels Ollama model."
+  }
+}

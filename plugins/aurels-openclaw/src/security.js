@@ -1,7 +1,10 @@
 const BLOCKED = "Aurels blocked this action because it violates the active security policy.";
 const SECRET_KEY = /(?:password|secret|token|api[_-]?key|authorization|cookie|credential)/i;
 const SECRET_VALUE = /(?:bearer\s+[a-z0-9\-_.=]+|(?:api[_-]?key|token|password|secret)\s*[:=]\s*\S+|-----BEGIN [A-Z ]+PRIVATE KEY-----)/i;
+import { createHash } from "node:crypto";
+
 const MAX_RESPONSE_BYTES = 1024 * 1024;
+const TRACE_TTL_MS = 10 * 60 * 1000;
 
 export function loadConfig(raw = {}) {
   const env = process.env;
@@ -58,12 +61,19 @@ export function createClient(config, fetchImpl = globalThis.fetch) {
 
 export function createHandlers(config, client) {
   const traceByCall = new Map();
+  const rememberTrace = (callId, traceId) => {
+    if (!callId || !traceId) return;
+    const entry = { traceId };
+    traceByCall.set(callId, entry);
+    setTimeout(() => {
+      if (traceByCall.get(callId) === entry) traceByCall.delete(callId);
+    }, TRACE_TTL_MS).unref?.();
+  };
   return {
     async beforeToolCall(event = {}, context = {}) {
-      if (!config.enabled || String(event.toolName || "").startsWith("aurels.")) return undefined;
-      // toolCallId is optional in OpenClaw. Its absence must never become an
-      // implicit allow: use a fresh action identity for this preflight.
-      const actionId = event.toolCallId || crypto.randomUUID();
+      if (!config.enabled) return undefined;
+      const hostCallId = event.toolCallId;
+      const actionId = hostCallId ?? crypto.randomUUID();
       const action = { version: "1", integration: "openclaw", action: { id: actionId, name: event.toolName, arguments: event.params ?? {} }, agent: { id: context.agentId, sessionId: context.sessionId, runId: context.runId }, timestamp: new Date().toISOString() };
       const local = localDecision(event);
       if (local.decision === "allow") return undefined;
@@ -74,7 +84,7 @@ export function createHandlers(config, client) {
       try {
         if (config.mode === "local" || !config.apiKey) return flagged(client, config, action, event, context);
         const decision = validateDecision(await client.evaluate(action));
-        traceByCall.set(action.action.id, decision.traceId);
+        if (decision.decision === "allow") rememberTrace(hostCallId, decision.traceId);
         if (decision.decision === "allow") return undefined;
         void report(client, config, action, decision.traceId, "blocked", event);
         if (decision.decision === "flag") return flagged(client, config, action, event, context);
@@ -84,11 +94,11 @@ export function createHandlers(config, client) {
       }
     },
     async afterToolCall(event = {}, context = {}) {
-      if (!config.enabled || !config.telemetry || !event.toolName || String(event.toolName).startsWith("aurels.")) return;
+      if (!config.enabled || !event.toolName) return;
       const actionId = event.toolCallId;
       if (!actionId) return;
       try {
-        await report(client, config, { action: { id: actionId }, agent: { id: context.agentId, sessionId: context.sessionId } }, traceByCall.get(actionId), event.success === false ? "failure" : "success", event);
+        await report(client, config, { action: { id: actionId }, agent: { id: context.agentId, sessionId: context.sessionId } }, traceByCall.get(actionId)?.traceId, event.success === false ? "failure" : "success", event);
       } finally {
         traceByCall.delete(actionId);
       }
@@ -147,7 +157,12 @@ function normalizeUrl(value) {
 function idempotencyKey(path, payload) {
   const id = path.endsWith("/evaluate") ? payload?.action?.id : payload?.actionId;
   const status = payload?.outcome?.status;
-  return `${path.endsWith("/evaluate") ? "action-evaluate" : "action-telemetry"}:${encodeURIComponent(String(id ?? "unknown"))}${status ? `:${status}` : ""}`;
+  const prefix = path.endsWith("/evaluate") ? "action-evaluate" : "action-telemetry";
+  if (path.endsWith("/evaluate")) {
+    const fingerprint = createHash("sha256").update(JSON.stringify(payload?.action ?? {})).digest("hex");
+    return `${prefix}:${encodeURIComponent(String(id ?? "unknown"))}:${fingerprint}`;
+  }
+  return `${prefix}:${encodeURIComponent(String(id ?? "unknown"))}${status ? `:${status}` : ""}`;
 }
 
 function validateDecision(value) {
