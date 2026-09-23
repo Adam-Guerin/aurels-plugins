@@ -1,7 +1,7 @@
 {
   "name": "aurels-plugins",
   "private": true,
-  "version": "0.2.4",
+  "version": "0.2.5",
   "scripts": {
     "test:openclaw": "npm --prefix plugins/aurels-openclaw test && npm --prefix plugins/aurels-openclaw run check",
     "test:hermes": "python -m unittest discover -s plugins/aurels-hermes/tests -t plugins/aurels-hermes && python plugins/aurels-hermes/tests/integration_test.py",

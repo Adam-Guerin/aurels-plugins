@@ -14,7 +14,7 @@ test("evaluates an action when OpenClaw omits its optional toolCallId", async ()
   assert.equal((await handlers.beforeToolCall({ toolName: "exec", params: { command: "rm -rf /" } }))?.block, true);
   assert.equal(evaluations, 0, "local deterministic blocking remains the first boundary");
   const ambiguous = await handlers.beforeToolCall({ toolName: "send_email", params: { to: "x@example.test" } });
-  assert.ok(ambiguous?.requireApproval);
+  assert.equal(ambiguous?.block, true);
 });
 test("evaluates an Aurels-prefixed tool instead of trusting its name", async () => {
   let evaluations = 0;
