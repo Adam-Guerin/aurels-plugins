@@ -1,12 +1,13 @@
 {
   "name": "aurels-plugins",
   "private": true,
-  "version": "0.2.5",
+  "version": "0.2.6",
   "scripts": {
     "test:openclaw": "npm --prefix plugins/aurels-openclaw test && npm --prefix plugins/aurels-openclaw run check",
     "test:hermes": "python -m unittest discover -s plugins/aurels-hermes/tests -t plugins/aurels-hermes && python plugins/aurels-hermes/tests/integration_test.py",
-    "test": "npm run test:openclaw && npm run test:hermes && npm run test:marketplace",
+    "test": "npm run test:openclaw && npm run test:hermes && npm run test:marketplace && npm run test:e2e:artifacts",
     "test:marketplace": "node -e \"const fs=require('fs');const m=JSON.parse(fs.readFileSync('.agents/plugins/marketplace.json'));if(!m.plugins.some(p=>p.name==='aurels-ollama'))process.exit(1);JSON.parse(fs.readFileSync('plugins/aurels-ollama/.codex-plugin/plugin.json'));\"",
+    "test:e2e:artifacts": "node --test tests/e2e-artifacts.test.mjs",
     "package:ollama": "node -e \"require('fs').mkdirSync('dist',{recursive:true})\" && tar -acf dist/aurels-ollama-plugin.zip -C plugins/aurels-ollama Modelfile.aurels README.md .codex-plugin/plugin.json",
     "release:manifest": "node scripts/generate-release-manifest.mjs"
   }

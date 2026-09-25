@@ -1,7 +1,7 @@
 {
   "id": "aurels",
   "name": "Aurels Security",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Pre-execution Aurels policy enforcement for OpenClaw tool calls.",
   "activation": {
     "onCapabilities": ["hook"]

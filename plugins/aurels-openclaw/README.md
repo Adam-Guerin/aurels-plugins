@@ -6,7 +6,7 @@
 
 | Component | Supported version |
 | --- | --- |
-| Plugin | 0.2.5 |
+| Plugin | 0.2.6 |
 | Node.js | 20 or newer |
 | OpenClaw | 2026.3.28 or newer, with `before_tool_call`, `after_tool_call` hooks and `requireApproval` support |
 | Aurels API | `/api/v1/actions/evaluate` and `/api/v1/actions/telemetry` |
@@ -46,7 +46,7 @@ Leave `AURELS_API_KEY` empty and set `AURELS_MODE=local` for offline use. Local 
 | `block` | Tool does not execute. |
 | Timeout, network failure, 4xx/5xx, invalid JSON, or another model output | `flag`: tool does not execute and requires human approval. |
 
-OpenClaw 2026.3.2+ properly handles the approval directive returned by Aurels.
+OpenClaw 2026.3.28+ is required for the approval directive returned by Aurels.
 
 Remote mode requires an HTTPS API URL with no embedded credentials. Responses are limited to 1 MiB before JSON parsing.
 
@@ -67,7 +67,7 @@ If the plugin cannot register both hooks, it throws at startup rather than silen
 
 ## Security boundary
 
-Protected: tool calls that reach OpenClaw's registered hooks. Not protected: native host actions that bypass these hooks, direct filesystem writes outside OpenClaw tools, or subprocesses launched before a tool call reaches the hook.
+Protected: tool calls that reach OpenClaw's registered hooks. Not protected: native host actions that bypass these hooks, direct filesystem writes outside OpenClaw tools, subprocesses launched before a tool call reaches the hook, or argument mutations made later in the host hook chain after a remote `allow`. Deploy a human-approval policy for high-consequence actions until OpenClaw provides an immutable final-dispatch permit bound to the executed arguments.
 
 ## License
 

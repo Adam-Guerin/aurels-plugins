@@ -6,7 +6,7 @@
 
 | Component | Supported version |
 | --- | --- |
-| Plugin | 0.2.5 |
+| Plugin | 0.2.6 |
 | Python | 3.11 or newer |
 | Hermes host | Any host adapter able to call synchronous pre- and post-action hooks |
 | Aurels API | `/api/v1/actions/evaluate` and `/api/v1/actions/telemetry` |
@@ -22,6 +22,18 @@ python -m unittest discover -s tests
 ```
 
 On macOS/Linux, activate with `source .venv/bin/activate`.
+
+For a wheel installed into the Hermes environment, add the package name to
+`plugins.enabled` in the Hermes configuration and restart Hermes:
+
+```yaml
+plugins:
+  enabled:
+    - aurels-hermes
+```
+
+`hermes plugins enable` only manages Git-cloned directory plugins; it does not
+activate Python entry-point packages.
 
 ## Hermes adapter example
 

@@ -10,6 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
       - name: Validate marketplace JSON
         run: |
           python -m json.tool marketplace.json > /dev/null
@@ -29,7 +35,11 @@ jobs:
       - name: Test Hermes plugin
         working-directory: plugins/aurels-hermes
         run: python -m unittest discover -s tests
-      - name: Generate reproducible release metadata
-        run: npm run release:manifest
+      - name: Install the built Hermes wheel in a clean environment
+        run: python tests/e2e-hermes-package.py
       - name: Build Ollama download archive
         run: npm run package:ollama
+      - name: Generate reproducible release metadata
+        run: npm run release:manifest
+      - name: Validate installable download artifacts
+        run: npm run test:e2e:artifacts

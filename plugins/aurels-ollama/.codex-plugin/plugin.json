@@ -1,6 +1,6 @@
 {
   "name": "aurels-ollama",
-  "version": "0.2.5+codex.20260923150441",
+  "version": "0.2.6+codex.20260925195000",
   "description": "Aurels local security-analysis model preset for Ollama.",
   "author": {
     "name": "Aurels"

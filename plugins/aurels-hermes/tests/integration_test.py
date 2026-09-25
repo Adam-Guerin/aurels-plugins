@@ -45,7 +45,7 @@ class IntegrationTests(unittest.TestCase):
         with open(pyproject_file, 'r') as f:
             content = f.read()
         
-        self.assertIn('aurels_hermes:register', content, "pyproject.toml should have correct entry point")
+        self.assertIn('aurels-hermes = "aurels_hermes"', content, "pyproject.toml should expose a module entry point")
         self.assertIn('hermes_agent.plugins', content, "pyproject.toml should define hermes entry point group")
 
 

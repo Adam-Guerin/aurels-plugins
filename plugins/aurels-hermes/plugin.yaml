@@ -1,7 +1,7 @@
 name: aurels-hermes
-version: 0.2.5
+version: 0.2.6
 description: Aurels security policy enforcement for Hermes agent tool calls
-entrypoint: aurels_hermes:register
+entrypoint: aurels_hermes
 provides_hooks:
   - pre_tool_call
   - post_tool_call
