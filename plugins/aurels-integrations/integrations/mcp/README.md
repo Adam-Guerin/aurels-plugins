@@ -1,5 +1,7 @@
 # Aurel MCP Proxy
 
+Use your own Jev key or local Laya/Ollama model with the [self-hosted evaluator](../../../aurels-evaluator/README.md). The guide generates the local URL/token configuration; this adapter retains its existing enforcement and approval contract.
+
 The MCP integration is a stdio JSON-RPC proxy. Run it in front of any local MCP server so `tools/call` requests are evaluated by Aurel before they reach the upstream tool server.
 
 ## Usage

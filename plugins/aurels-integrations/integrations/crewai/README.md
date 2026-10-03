@@ -1,5 +1,7 @@
 # Aurel for CrewAI
 
+Use your own Jev key or local Laya/Ollama model with the [self-hosted evaluator](../../../aurels-evaluator/README.md). The guide generates the local URL/token configuration; this adapter retains its existing enforcement and approval contract.
+
 CrewAI task guardrails validate task outputs. For pre-tool security, Aurel wraps CrewAI tools so the check runs before synchronous `_run`, asynchronous `_arun`, or a callable tool executes. Coroutine callables remain asynchronous; completion telemetry waits for their actual result.
 
 ## Usage

@@ -6,6 +6,7 @@ Open-source, downloadable integrations maintained by Aurels.
 
 - **Aurels for OpenClaw** — integration package for OpenClaw.
 - **Aurels for Hermes** — integration package for Hermes.
+- **Your own evaluator** — choose Jev, Laya, Ollama, or an OpenAI-compatible server without an Aurels cloud account; see the [self-hosted configuration guide](plugins/aurels-evaluator/README.md).
 - **Aurels for Ollama** — local security-analysis model preset, installable through the Codex marketplace or release archive.
 - **Framework integrations** — experimental adapters for Claude Code, Codex, CrewAI, LangGraph, MCP, and OpenAI Agents, maintained in `plugins/aurels-integrations`. Aurels Codex Guard is also listed as an experimental, manually installable plugin in this repository's Codex marketplace.
 
@@ -21,6 +22,7 @@ plugins/
   aurels-hermes/
   aurels-ollama/
   aurels-integrations/
+  aurels-evaluator/
 ```
 
 Start with the documentation inside the package you want to install:

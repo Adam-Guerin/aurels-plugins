@@ -9,7 +9,8 @@
     "test:host-contract": "tsx --test tests/host-contract.test.ts tests/agent-runners.test.ts",
     "typecheck": "tsc --noEmit",
     "test:e2e": "node --test --test-concurrency=1 tests/e2e-prefix-enforcement.test.mjs tests/codex-hook.test.mjs tests/mcp-sdk.test.mjs",
-    "test": "npm run typecheck && npm run test:python && npm run test:shared-guard && npm run test:host-contract && npm run test:e2e"
+    "test": "npm run typecheck && npm run test:python && npm run test:shared-guard && npm run test:host-contract && npm run test:evaluator && npm run test:e2e",
+    "test:evaluator": "tsx --test tests/evaluator-consumers.test.ts"
   },
   "license": "MIT",
   "devDependencies": {

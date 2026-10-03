@@ -233,7 +233,7 @@ function normalizeToolCall(call: AurelToolCall, integration: string, snapshotArg
     action: {
       id: call.id ?? randomId(`${integration}-act`),
       name: call.name,
-      type: call.type,
+      ...(call.type === undefined ? {} : { type: call.type }),
       arguments: snapshotArguments ? structuredClone(call.arguments) : call.arguments,
     },
     agent: call.agent ?? {},

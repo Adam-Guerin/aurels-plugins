@@ -1,5 +1,7 @@
 # Aurels for OpenClaw
 
+Use your own Jev key or local Laya/Ollama model with the [self-hosted evaluator](../aurels-evaluator/README.md). The guide generates the local URL/token configuration; this adapter retains its existing enforcement and approval contract.
+
 `@aurels/aurels` is a standalone Node.js plugin that intercepts OpenClaw tool calls before execution. With no API key, it runs an offline deterministic policy and makes no network request. A key optionally enables remote Aurels evaluation.
 
 ## Support contract
@@ -70,7 +72,7 @@ The host's configured model reviews a bounded set of redacted tool names, argume
 
 OpenClaw 2026.3.28+ is required for the approval directive returned by Aurels. The plugin reads the host version at startup; on older or unknown hosts it hard-blocks decisions that require an approval or parameter freeze rather than letting unsupported fields be ignored. This PC currently has OpenClaw 2026.3.2: it can load the plugin, but is below the supported minimum, so policy-allowed remote actions are also blocked. Upgrade OpenClaw before using the integration.
 
-Remote mode requires an HTTPS API URL with no embedded credentials. Responses are limited to 1 MiB before JSON parsing.
+Remote mode requires an HTTPS API URL, or HTTP on loopback (`127.0.0.1`, `localhost`, `::1`) for a self-hosted evaluator, with no embedded credentials. Responses are limited to 1 MiB before JSON parsing.
 
 Rate-limit responses block immediately and display the server's `Retry-After` interval. Other outages and malformed responses require human approval on a supported host, or hard-block on a host version that cannot safely present an approval request. Every remote `allow` also requires one-shot confirmation: OpenClaw runs Aurels at the highest ordinary-hook priority, and its approval freezes the exact evaluated parameter snapshot so lower-priority hooks cannot rewrite it. This adds an approval step to every call; keep the integration enabled only on a host build with the documented approval contract.
 

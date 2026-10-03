@@ -26,8 +26,9 @@ class AurelsClient:
     def __init__(self, config):
         self.config = config
         parsed = urlparse(config.api_url)
-        if parsed.scheme != "https" or parsed.username or parsed.password:
-            raise ValueError("Aurels API URL must use HTTPS and contain no credentials")
+        loopback_http = parsed.scheme == "http" and parsed.hostname in {"127.0.0.1", "localhost", "::1"}
+        if (parsed.scheme != "https" and not loopback_http) or parsed.username or parsed.password:
+            raise ValueError("Aurels API URL must use HTTPS (or loopback HTTP) and contain no credentials")
         self.base_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path.rstrip("/"), "", "", ""))
 
     def evaluate(self, action):

@@ -1,5 +1,7 @@
 # Aurels Guard for Codex
 
+Use your own Jev key or local Laya/Ollama model with the [self-hosted evaluator](../../../../aurels-evaluator/README.md). The guide generates the local URL/token configuration; this adapter retains its existing enforcement and approval contract.
+
 This is a portable Codex plugin bundle. It uses Codex's native synchronous `PreToolUse` and `PostToolUse` hooks to check supported local function tools before execution and send post-action telemetry.
 
 ## Install

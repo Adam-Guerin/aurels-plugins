@@ -7,6 +7,7 @@ This repository is the public source of truth for the supported Aurels plugin pa
 - [Repository overview](../README.md)
 - [Support matrix and runtime boundaries](SUPPORT-MATRIX.md)
 - [October 2026 hardening and regression evidence](PLUGIN-HARDENING-2026-10.md)
+- [Your own Jev key or local model](../plugins/aurels-evaluator/README.md)
 - [Release verification](RELEASE-TRUST.md)
 - [Security reporting and key hygiene](../SECURITY.md)
 - [Contributing](../CONTRIBUTING.md)

@@ -1,0 +1,12 @@
+{
+  "name": "@aurels/evaluator",
+  "version": "0.1.0",
+  "description": "Self-hosted evaluation for Aurels plugins using Jev, Laya, Ollama, or compatible local models",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22" },
+  "bin": { "aurels-evaluator": "src/cli.mjs" },
+  "exports": { ".": "./src/server.mjs" },
+  "files": ["src", "README.md"],
+  "scripts": { "test": "node --test ../../tests/model-evaluator.test.mjs ../../tests/evaluator-cli.test.mjs" }
+}

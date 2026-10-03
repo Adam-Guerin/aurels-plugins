@@ -14,3 +14,4 @@ build/
 *.tsbuildinfo
 .tmp-codex-state/
 .ci/
+.aurels-evaluator/

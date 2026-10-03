@@ -1,5 +1,7 @@
 # Aurels for Hermes
 
+Use your own Jev key or local Laya/Ollama model with the [self-hosted evaluator](../aurels-evaluator/README.md). The guide generates the local URL/token configuration; this adapter retains its existing enforcement and approval contract.
+
 `aurels-hermes` is a standalone Python 3.11+ native Hermes plugin. In `remote` mode it registers `pre_tool_call` and `post_tool_call` for Aurels API enforcement. In `local` mode it runs offline deterministic checks and blocks ambiguous actions because Hermes' native hook cannot pause for approval. In the separately opt-in `retrospective` mode it lets tools run and asks Hermes' already-configured model to review a bounded, redacted action summary at session end; this is advisory and is not an execution guard.
 
 ## Support contract
@@ -96,7 +98,7 @@ For post-action model review using the model/provider and authentication already
 
 `before_action` alone never calls a handler; `run_protected` owns synchronous dispatch. The native hook converts every status other than an explicit `allow` or valid `block` into a nonempty host `block` response; tests exercise this through Hermes' real sequential dispatcher. Native Hermes hooks do not support interactive approval/resume. The pre-hook returns its generated `action_id`; native Hermes adapters should pass the host `tool_call_id` through both callbacks when available. When it is absent, the plugin correlates by task/session and a canonical fingerprint of tool name and arguments with a bounded TTL.
 
-Remote mode requires an HTTPS API URL with no embedded credentials. Responses are limited to 1 MiB before JSON parsing.
+Remote mode requires an HTTPS API URL, or HTTP on loopback (`127.0.0.1`, `localhost`, `::1`) for a self-hosted evaluator, with no embedded credentials. Responses are limited to 1 MiB before JSON parsing.
 
 The current API quota is 600 requests per minute per workspace, shared by integrations. A 429 response includes `Retry-After` and standard `X-RateLimit-*` headers. The Free Supabase project does not provide an isolated staging database; a key created in the current Aurels workspace reaches its live policies and data.
 

@@ -65,6 +65,7 @@ jobs:
           npm run package:langgraph
           npm run package:openai-agents
           npm run package:mcp
+          npm run package:evaluator
           npm run release:manifest
           sha256sum plugins/aurels-hermes/dist/* plugins/aurels-openclaw/*.tgz >> dist/SHA256SUMS
           sort -k2 -o dist/SHA256SUMS dist/SHA256SUMS
@@ -82,6 +83,7 @@ jobs:
             dist/aurels-langgraph-guard-0.1.0.tgz
             dist/aurels-openai-agents-guard-0.1.0.tgz
             dist/aurels-mcp-proxy-0.1.0.tgz
+            dist/aurels-evaluator-0.1.0.tgz
             plugins/aurels-hermes/dist/*.whl
             plugins/aurels-openclaw/*.tgz
       - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
@@ -101,6 +103,7 @@ jobs:
             dist/aurels-langgraph-guard-0.1.0.tgz
             dist/aurels-openai-agents-guard-0.1.0.tgz
             dist/aurels-mcp-proxy-0.1.0.tgz
+            dist/aurels-evaluator-0.1.0.tgz
             plugins/aurels-hermes/dist/*.whl
             plugins/aurels-hermes/dist/*.tar.gz
             plugins/aurels-openclaw/*.tgz

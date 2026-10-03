@@ -372,7 +372,8 @@ async function report(client, config, action, traceId, status, event, outbox) {
 
 function normalizeUrl(value) {
   const url = new URL(value);
-  if (url.protocol !== "https:" || url.username || url.password) throw new Error("Aurels API URL must use HTTPS and contain no credentials.");
+  const loopbackHttp = url.protocol === "http:" && ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname);
+  if ((url.protocol !== "https:" && !loopbackHttp) || url.username || url.password) throw new Error("Aurels API URL must use HTTPS (or loopback HTTP) and contain no credentials.");
   url.search = ""; url.hash = "";
   return url.toString().replace(/\/$/, "");
 }

@@ -49,6 +49,14 @@ npm audit --audit-level=high --prefix plugins/aurels-integrations
 
 On Windows, set the same variables in PowerShell and use each virtual environment's `Scripts/python.exe`. The supported-runtime CI additionally checks current OpenClaw with its required Node runtime. GitHub workflow execution remains to be confirmed after pushing this branch; local success is not a claim that remote CI has run.
 
+## Own-provider evaluation follow-up
+
+The same branch now includes `@aurels/evaluator` 0.1.0 for Jev, Laya, Ollama, and OpenAI-compatible structured-output endpoints. It binds to loopback, keeps provider credentials separate from plugin credentials, and never forwards requests to Aurels. The [configuration guide](../plugins/aurels-evaluator/README.md) describes installation, policy, endpoint selection, and loading the generated plugin environment.
+
+The extended full suite passed 326 reported tests. One additional regression for oversized provider-stream cancellation passed afterward with all evaluator tests (21); artifact tests then rebuilt and reinstalled the final service and repeated the consumer dispatch checks. The final set therefore covers 327 reported tests, in addition to the native-host and nested installed-package scenarios described above. The eight consumer integrations cover real HTTP dispatch through OpenAI Agents Runner, compiled LangGraph, MCP SDK, OpenClaw handlers, Hermes/CrewAI dispatchers, and Claude/Codex command scripts. The protocol tests cover all four providers, authentication, bounded inputs/concurrency, cancellation, malformed outputs, and Laya truncation/abstention. Live Jev credentials and loaded local model inference remain unverified.
+
+End-to-end default HTTP clients also exposed an unset `action.type` being serialized as `undefined` in the shared TypeScript guard. Omitting that optional field restores evaluation for tools without an explicit type; fake-client tests had not exercised this serialization path. OpenClaw and Hermes now permit plain HTTP strictly on loopback for this service, retaining HTTPS for remote endpoints. Dependency auditing still reports zero vulnerabilities.
+
 ## Deployment constraints
 
 This pass improves correctness at the tested boundaries. It does not make every integration universally production-ready:

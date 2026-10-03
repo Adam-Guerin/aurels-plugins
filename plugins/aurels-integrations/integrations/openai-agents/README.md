@@ -1,5 +1,7 @@
 # Aurel for OpenAI Agents SDK
 
+Use your own Jev key or local Laya/Ollama model with the [self-hosted evaluator](../../../aurels-evaluator/README.md). The guide generates the local URL/token configuration; this adapter retains its existing enforcement and approval contract.
+
 The OpenAI Agents SDK supports tool guardrails on custom function tools, and also allows ordinary tool execution functions to be wrapped. Aurel provides both:
 
 - `createAurelOpenAIToolInputGuardrail(toolName, config)`

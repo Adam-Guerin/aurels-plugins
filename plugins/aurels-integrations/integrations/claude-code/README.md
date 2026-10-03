@@ -1,5 +1,7 @@
 # Aurel for Claude Code
 
+Use your own Jev key or local Laya/Ollama model with the [self-hosted evaluator](../../../aurels-evaluator/README.md). The guide generates the local URL/token configuration; this adapter retains its existing enforcement and approval contract.
+
 Claude Code exposes native hooks at tool-call boundaries. Aurel uses `PreToolUse` for enforcement and `PostToolUse` / `PostToolUseFailure` for telemetry.
 
 This adapter is experimental and is not covered by the supported plugin release contract. A native plugin bundle is published as `aurels-claude-code-plugin.zip` with each GitHub release.

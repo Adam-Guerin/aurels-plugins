@@ -6,6 +6,10 @@
 | Aurels Hermes | 0.2.6 | Python 3.11+, pinned Hermes native hook host | Supported with constraints | Native refusal tested through real dispatch. Remote native allow is blocked unless hook ordering is explicitly trusted. Application-owned synchronous `run_protected` binds evaluation to its argument snapshot. `retrospective` is advisory only |
 | Aurels Ollama | 0.2.6 | Ollama with `qwen3-coder:q3` | Supported | Local analysis only; not an execution hook |
 
+## Self-hosted evaluation
+
+`@aurels/evaluator` 0.1.0 is an experimental Node 22+ service for Jev, Laya, Ollama, and OpenAI-compatible structured-output servers. All eight enforcement adapters are exercised through its real HTTP endpoint using fixture models; the installed archive is also verified. Live model quality and credentials remain unverified. Existing host boundaries below still apply. See the [configuration guide](../plugins/aurels-evaluator/README.md).
+
 ## Experimental adapters: validated boundaries
 
 These packages remain experimental and outside the supported marketplace release contract. Validation is stronger than a wrapper-only smoke test, but does not establish universal host compatibility.

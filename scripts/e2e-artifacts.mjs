@@ -113,6 +113,12 @@ export async function validateReleaseArtifacts(root) {
   }
   await rm(codexUnpacked, { recursive: true, force: true });
 
+  const evaluatorEntries = execFileSync("tar", ["-tzf", resolve(root, "dist/aurels-evaluator-0.1.0.tgz")], { encoding: "utf8" }).split(/\r?\n/).filter(Boolean);
+  for (const required of ["package/package.json", "package/README.md", "package/src/cli.mjs", "package/src/config.mjs", "package/src/model.mjs", "package/src/server.mjs"]) {
+    if (!evaluatorEntries.includes(required)) throw new Error(`Evaluator archive is missing ${required}`);
+  }
+  if (evaluatorEntries.some((entry) => /(?:^|\/)(?:config\.json|plugin\.env|node_modules)(?:\/|$)/.test(entry))) throw new Error("Evaluator archive contains local configuration or dependencies.");
+
   const checksums = await readFile(resolve(root, "dist/SHA256SUMS"), "utf8");
   let hashesVerified = true;
   const checksumPaths = new Set();
@@ -128,11 +134,11 @@ export async function validateReleaseArtifacts(root) {
       throw new Error(`Checksum mismatch for ${relativePath}`);
     }
   }
-  for (const archive of ["dist/aurels-ollama-plugin.zip", "dist/aurels-framework-integrations.tar.gz", "dist/aurels_crewai-0.1.0-py3-none-any.whl", "dist/aurels-claude-code-plugin.zip", "dist/aurels-codex-guard-plugin.zip", "dist/aurels-langgraph-guard-0.1.0.tgz", "dist/aurels-openai-agents-guard-0.1.0.tgz", "dist/aurels-mcp-proxy-0.1.0.tgz"]) {
+  for (const archive of ["dist/aurels-ollama-plugin.zip", "dist/aurels-framework-integrations.tar.gz", "dist/aurels_crewai-0.1.0-py3-none-any.whl", "dist/aurels-claude-code-plugin.zip", "dist/aurels-codex-guard-plugin.zip", "dist/aurels-langgraph-guard-0.1.0.tgz", "dist/aurels-openai-agents-guard-0.1.0.tgz", "dist/aurels-mcp-proxy-0.1.0.tgz", "dist/aurels-evaluator-0.1.0.tgz"]) {
     if (!checksumPaths.has(archive)) throw new Error(`Release checksum list is missing ${archive}`);
   }
 
-  return { marketplacePlugins, archives: ["dist/aurels-ollama-plugin.zip", "dist/aurels-framework-integrations.tar.gz", "dist/aurels_crewai-0.1.0-py3-none-any.whl", "dist/aurels-claude-code-plugin.zip", "dist/aurels-codex-guard-plugin.zip", "dist/aurels-langgraph-guard-0.1.0.tgz", "dist/aurels-openai-agents-guard-0.1.0.tgz", "dist/aurels-mcp-proxy-0.1.0.tgz"], hashesVerified };
+  return { marketplacePlugins, archives: ["dist/aurels-ollama-plugin.zip", "dist/aurels-framework-integrations.tar.gz", "dist/aurels_crewai-0.1.0-py3-none-any.whl", "dist/aurels-claude-code-plugin.zip", "dist/aurels-codex-guard-plugin.zip", "dist/aurels-langgraph-guard-0.1.0.tgz", "dist/aurels-openai-agents-guard-0.1.0.tgz", "dist/aurels-mcp-proxy-0.1.0.tgz", "dist/aurels-evaluator-0.1.0.tgz"], hashesVerified };
 }
 
 if (import.meta.main) {

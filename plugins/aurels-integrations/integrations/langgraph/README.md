@@ -1,5 +1,7 @@
 # Aurel for LangGraph
 
+Use your own Jev key or local Laya/Ollama model with the [self-hosted evaluator](../../../aurels-evaluator/README.md). The guide generates the local URL/token configuration; this adapter retains its existing enforcement and approval contract.
+
 LangGraph executes tools through `ToolNode` in graph workflows. Aurel wraps the tools before they are handed to `ToolNode`.
 
 ```ts

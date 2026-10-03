@@ -13,6 +13,15 @@ import plugin from "../src/index.js";
 const config = loadConfig({ apiUrl: "https://example.test", apiKey: "test", telemetry: false });
 const redactionCorpus = JSON.parse(readFileSync(new URL("../../aurels-integrations/tests/fixtures/redaction-corpus.json", import.meta.url), "utf8"));
 
+test("self-hosted evaluator endpoints allow loopback HTTP while public plaintext remains refused", () => {
+  for (const apiUrl of ["http://127.0.0.1:8788", "http://localhost:8788", "http://[::1]:8788"]) {
+    assert.equal(loadConfig({ apiUrl, apiKey: "local-access-token" }).apiUrl, apiUrl);
+  }
+  for (const apiUrl of ["http://localhost.evil.test:8788", "http://192.168.1.2:8788", "http://user:secret@127.0.0.1:8788"]) {
+    assert.throws(() => loadConfig({ apiUrl, apiKey: "local-access-token" }));
+  }
+});
+
 test("durable telemetry expires stale local events without sending them", async () => {
   const spoolDir = await mkdtemp(join(tmpdir(), "aurels-openclaw-expiry-"));
   try {

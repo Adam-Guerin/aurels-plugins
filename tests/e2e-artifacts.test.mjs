@@ -21,6 +21,7 @@ test("release artifacts expose every marketplace plugin and verify their hashes"
   execFileSync("npm", ["run", "package:langgraph"], { cwd: root, stdio: "inherit", shell: process.platform === "win32" });
   execFileSync("npm", ["run", "package:openai-agents"], { cwd: root, stdio: "inherit", shell: process.platform === "win32" });
   execFileSync("npm", ["run", "package:mcp"], { cwd: root, stdio: "inherit", shell: process.platform === "win32" });
+  execFileSync("npm", ["run", "package:evaluator"], { cwd: root, stdio: "inherit", shell: process.platform === "win32" });
   const untrackedProbe = `plugins/aurels-openclaw/.manifest-untracked-probe-${randomUUID()}.txt`;
   await writeFile(resolve(root, untrackedProbe), "must not enter the release manifest\n", "utf8");
   try {
@@ -53,6 +54,7 @@ test("release artifacts expose every marketplace plugin and verify their hashes"
   assert.ok(report.archives.includes("dist/aurels-langgraph-guard-0.1.0.tgz"));
   assert.ok(report.archives.includes("dist/aurels-openai-agents-guard-0.1.0.tgz"));
   assert.ok(report.archives.includes("dist/aurels-mcp-proxy-0.1.0.tgz"));
+  assert.ok(report.archives.includes("dist/aurels-evaluator-0.1.0.tgz"));
   assert.deepEqual(
     execFileSync("tar", ["-tzf", "dist/aurels-framework-integrations.tar.gz"], { cwd: root, encoding: "utf8" })
       .split(/\r?\n/)
@@ -73,6 +75,7 @@ test("release artifacts expose every marketplace plugin and verify their hashes"
       "dist/aurels-langgraph-guard-0.1.0.tgz",
       "dist/aurels-openai-agents-guard-0.1.0.tgz",
       "dist/aurels-mcp-proxy-0.1.0.tgz",
+      "dist/aurels-evaluator-0.1.0.tgz",
     ].map((archive) => resolve(root, archive));
     execFileSync("npm", ["install", "--ignore-scripts", "--legacy-peer-deps", "--no-audit", "--no-fund", ...packages], {
       cwd: packageRoot, stdio: "inherit", shell: process.platform === "win32",
@@ -96,6 +99,13 @@ test("release artifacts expose every marketplace plugin and verify their hashes"
       assert.equal(mcp.bin['aurels-mcp-proxy'], 'src/aurel-mcp-proxy.mjs');
     `;
     execFileSync(process.execPath, ["--input-type=module", "-e", checkInstalledAdapters], { cwd: packageRoot, stdio: "inherit" });
+    const installedEvaluator = spawnSync(process.execPath, ["--test", "tests/model-evaluator.test.mjs", "tests/evaluator-cli.test.mjs"], {
+      cwd: root, env: { ...process.env,
+        AURELS_EVALUATOR_MODULE: resolve(packageRoot, "node_modules/@aurels/evaluator/src/server.mjs"),
+        AURELS_EVALUATOR_BIN: resolve(packageRoot, "node_modules/@aurels/evaluator/src/cli.mjs") },
+      encoding: "utf8", timeout: 30_000,
+    });
+    if (installedEvaluator.status !== 0) throw new Error(`Installed evaluator protocol/CLI failed:\n${installedEvaluator.stdout}\n${installedEvaluator.stderr}`);
     const packagedMcpProxy = resolve(packageRoot, "node_modules/@aurels/mcp-proxy/src/aurel-mcp-proxy.mjs");
     const packagedClaude = resolve(packageRoot, "claude-plugin");
     const packagedCodex = resolve(packageRoot, "codex-plugin");
@@ -112,9 +122,10 @@ test("release artifacts expose every marketplace plugin and verify their hashes"
       encoding: "utf8", timeout: 60_000,
     });
     if (hookE2e.status !== 0) throw new Error(`Packaged native-hook/MCP E2E failed:\n${hookE2e.stdout}\n${hookE2e.stderr}`);
-    const nativeSdkTests = spawnSync(process.execPath, ["--import", "tsx", "--test", "tests/agent-runners.test.ts", "tests/mcp-sdk.test.mjs"], {
+    const nativeSdkTests = spawnSync(process.execPath, ["--import", "tsx", "--test", "tests/agent-runners.test.ts", "tests/mcp-sdk.test.mjs", "tests/evaluator-consumers.test.ts"], {
       cwd: resolve(root, "plugins/aurels-integrations"),
       env: { ...process.env, AUREL_MCP_PROXY_BIN: packagedMcpProxy,
+        AURELS_EVALUATOR_MODULE: resolve(packageRoot, "node_modules/@aurels/evaluator/src/server.mjs"),
         AURELS_LG_ADAPTER_MODULE: resolve(packageRoot, "node_modules/@aurels/langgraph-guard/dist/langgraph/src/index.js"),
         AURELS_OAI_ADAPTER_MODULE: resolve(packageRoot, "node_modules/@aurels/openai-agents-guard/dist/openai-agents/src/index.js") },
       encoding: "utf8", timeout: 60_000,

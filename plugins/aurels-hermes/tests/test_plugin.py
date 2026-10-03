@@ -681,6 +681,15 @@ class PluginTests(unittest.TestCase):
             plugin = AurelsHermesPlugin({"api_key": "test", "mode": "remote", "telemetry_enabled": False}, Client({"decision": decision}))
             self.assertEqual(plugin.before_action("send_email")["action"], "approve")
 
+    def test_client_allows_loopback_evaluators_but_rejects_public_plaintext(self):
+        for url in ("http://127.0.0.1:8788", "http://localhost:8788", "http://[::1]:8788"):
+            with self.subTest(url=url):
+                self.assertEqual(AurelsClient(Config(enabled=True, api_url=url, api_key="local-access-token", mode="remote")).base_url, url)
+        for url in ("http://localhost.evil.test:8788", "http://192.168.1.2:8788", "http://user:password@127.0.0.1:8788"):
+            with self.subTest(url=url):
+                with self.assertRaises(ValueError):
+                    AurelsClient(Config(enabled=True, api_url=url, api_key="local-access-token", mode="remote"))
+
     def test_client_rejects_non_https_api_urls(self):
         with self.assertRaises(ValueError):
             AurelsClient(Config(enabled=True, api_url="http://aurels.test", api_key="secret", mode="remote"))

@@ -19,6 +19,8 @@ jobs:
       - name: Test Hermes enforcement and process-safe telemetry on Windows
         working-directory: plugins/aurels-hermes
         run: python -m unittest discover -s tests
+      - name: Verify self-hosted evaluator protocols and CLI on Windows
+        run: npm run test:evaluator
       - name: Verify Node and Python queue caps across independent Windows processes
         run: npm run test:e2e:telemetry
 
@@ -56,6 +58,8 @@ jobs:
         run: npm ci --prefix plugins/aurels-integrations
       - name: Audit locked npm dependencies
         run: npm audit --audit-level=high --prefix plugins/aurels-integrations
+      - name: Verify self-hosted evaluator protocols and CLI
+        run: npm run test:evaluator
       - name: Validate marketplace JSON
         run: |
           python -m json.tool marketplace.json > /dev/null
