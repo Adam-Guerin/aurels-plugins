@@ -1,7 +1,16 @@
 import re
 
 SENSITIVE = re.compile(r"password|secret|token|api[_-]?key|authorization|cookie|credential", re.I)
-SENSITIVE_VALUE = re.compile(r"(bearer\s+[a-z0-9\-_.=]+|(?:api[_-]?key|token|password|secret)\s*[:=]\s*\S+|-----BEGIN [A-Z ]+PRIVATE KEY-----)", re.I)
+SENSITIVE_VALUE = re.compile(
+    r"(bearer\s+[a-z0-9\-_.=]+"
+    r"|(?:api[_-]?key|token|password|secret)\s*[:=]\s*\S+"
+    r"|-----BEGIN [A-Z ]+PRIVATE KEY-----"
+    r"|\bsk-(?:proj-)?[a-z0-9_-]{20,}\b"
+    r"|\b(?:AKIA|ASIA)[0-9A-Z]{16}\b"
+    r"|\bgh[pousr]_[a-z0-9_]{30,}\b"
+    r"|\beyJ[a-z0-9_-]{8,}\.[a-z0-9_-]{8,}\.[a-z0-9_-]{8,}\b)",
+    re.I,
+)
 
 def redact(value, seen=None, depth=0):
     if seen is None:

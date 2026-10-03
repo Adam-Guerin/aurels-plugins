@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "aurel-protected-mcp": {
+      "command": "node",
+      "args": ["./scripts/aurel-protected-mcp.mjs"],
+      "env": {
+        "AUREL_MCP_INTEGRATION": "codex"
+      }
+    }
+  }
+}

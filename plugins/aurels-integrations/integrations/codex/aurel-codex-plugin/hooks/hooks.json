@@ -1,0 +1,30 @@
+{
+  "description": "Aurels policy checks for Codex local function tools.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/hooks/aurel-codex-hook.mjs\"",
+            "timeout": 35,
+            "statusMessage": "Checking action with Aurels"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/hooks/aurel-codex-hook.mjs\"",
+            "timeout": 35
+          }
+        ]
+      }
+    ]
+  }
+}

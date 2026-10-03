@@ -1,0 +1,11 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "aurels-codex-guard",
+  "version": "0.1.0",
+  "description": "Aurels pre-tool policy enforcement and post-tool audit telemetry for Codex local tools.",
+  "extensions": {
+    "com.openai": {
+      "hooks": "./hooks/hooks.json"
+    }
+  }
+}

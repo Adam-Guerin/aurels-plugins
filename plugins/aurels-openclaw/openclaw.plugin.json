@@ -15,7 +15,10 @@
       "apiKey": { "type": "string" },
       "mode": { "enum": ["local", "remote"] },
       "timeoutMs": { "type": "number", "minimum": 100, "maximum": 30000 },
-      "telemetry": { "type": "boolean" }
+      "telemetry": { "type": "boolean" },
+      "telemetryDurable": { "type": "boolean" },
+      "telemetrySpoolDir": { "type": "string" },
+      "retrospectiveEnabled": { "type": "boolean" }
     }
   }
 }

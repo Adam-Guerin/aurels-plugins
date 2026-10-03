@@ -46,6 +46,24 @@ async function testPluginManifest() {
   }
 }
 
+async function testReadmeMatchesPackageAndLocalDecisionContract() {
+  try {
+    const packageJson = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8"));
+    const readme = readFileSync(join(process.cwd(), "README.md"), "utf8");
+    if (!readme.includes(`\`${packageJson.name}\``)) {
+      throw new Error(`README package name does not match ${packageJson.name}`);
+    }
+    if (/Local deterministic `allow`/.test(readme) || !/Local ambiguous action/.test(readme)) {
+      throw new Error("README must describe the offline policy as destructive block or ambiguous approval, never automatic allow");
+    }
+    console.log("Package identity and local decision documentation validated");
+    return true;
+  } catch (error) {
+    console.error("Failed to validate README contract:", error);
+    return false;
+  }
+}
+
 async function runTests() {
   console.log("Running OpenClaw integration tests...");
   
@@ -58,6 +76,12 @@ async function runTests() {
   const manifestOk = await testPluginManifest();
   if (!manifestOk) {
     console.log("Plugin manifest test failed");
+    process.exit(1);
+  }
+
+  const readmeOk = await testReadmeMatchesPackageAndLocalDecisionContract();
+  if (!readmeOk) {
+    console.log("README contract test failed");
     process.exit(1);
   }
   

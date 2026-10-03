@@ -31,10 +31,14 @@ with tempfile.TemporaryDirectory(prefix="aurels-hermes-e2e-") as temporary:
     python = environment / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
     run(str(python), "-m", "pip", "install", "--no-index", str(wheel))
     code = (
-        "import importlib.metadata as m; "
+        "import importlib.metadata as m, pathlib, tempfile; "
         "entry=next(e for e in m.entry_points(group='hermes_agent.plugins') if e.name == 'aurels-hermes'); "
         "assert entry.value == 'aurels_hermes', entry.value; "
-        "assert callable(getattr(entry.load(), 'register', None))"
+        "assert callable(getattr(entry.load(), 'register', None)); "
+        "from aurels_hermes.outbox import TelemetryOutbox; "
+        "d=tempfile.TemporaryDirectory(); q=TelemetryOutbox(d.name); q.enqueue({'actionId':'wheel-e2e'}); "
+        "assert q.flush(lambda event: event['actionId'] == 'wheel-e2e') == 1; "
+        "assert not list(pathlib.Path(d.name).glob('*.json')); d.cleanup()"
     )
     run(str(python), "-c", code)
 

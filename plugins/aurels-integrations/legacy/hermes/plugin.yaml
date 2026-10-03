@@ -1,0 +1,7 @@
+name: aurel
+kind: plugin
+version: 0.1.0
+description: Intercepts Hermes tool calls before execution and enforces Aurel security decisions.
+provides_hooks:
+  - pre_tool_call
+  - post_tool_call

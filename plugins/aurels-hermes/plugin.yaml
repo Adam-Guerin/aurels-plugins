@@ -5,10 +5,14 @@ entrypoint: aurels_hermes
 provides_hooks:
   - pre_tool_call
   - post_tool_call
+  - on_session_finalize
 configuration:
   - enabled
   - api_url
   - api_key
-  - mode
+  - mode (local, remote, retrospective)
   - timeout_ms
   - telemetry_enabled
+  - telemetry_durable
+  - telemetry_spool_dir
+  - trust_native_hook_order (AURELS_HERMES_TRUST_NATIVE_HOOK_ORDER; default false; opt-in only after verifying no later hook can rewrite arguments)

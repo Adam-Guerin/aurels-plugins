@@ -8,6 +8,7 @@
   "files": ["src", "docs", "README.md", "CHANGELOG.md", "LICENSE", "openclaw.plugin.json", ".env.example"],
   "scripts": {
     "test": "node --test tests/security.test.js && node --test tests/integration.test.js",
+    "test:e2e:host": "node --test --test-name-pattern=real OpenClaw tests/security.test.js",
     "check": "node --check src/index.js && node --check src/security.js"
   },
   "peerDependencies": {

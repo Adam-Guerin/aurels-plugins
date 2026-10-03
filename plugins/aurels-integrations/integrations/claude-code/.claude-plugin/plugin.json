@@ -1,0 +1,5 @@
+{
+  "name": "aurels-claude-code",
+  "version": "0.1.0",
+  "description": "Aurels pre-tool policy enforcement and post-tool telemetry for Claude Code."
+}

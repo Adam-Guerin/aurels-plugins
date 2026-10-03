@@ -1,0 +1,24 @@
+{
+  "name": "@aurels/langgraph-guard",
+  "version": "0.1.0",
+  "description": "Pre-execution Aurels guard for LangGraph tools",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/langgraph/src/index.js",
+  "types": "dist/langgraph/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/langgraph/src/index.d.ts",
+      "import": "./dist/langgraph/src/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "prepack": "tsc --project tsconfig.build.json"
+  },
+  "peerDependencies": {
+    "@langchain/core": ">=1.0.0",
+    "@langchain/langgraph": ">=1.0.0"
+  },
+  "engines": { "node": ">=20" }
+}
