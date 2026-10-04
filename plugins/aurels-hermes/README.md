@@ -8,7 +8,7 @@ Use your own Jev key or local Laya/Ollama model with the [self-hosted evaluator]
 
 | Component | Supported version |
 | --- | --- |
-| Plugin | 0.2.6 |
+| Plugin | 0.3.0 |
 | Python | 3.11 or newer |
 | Hermes host | Hermes Agent v0.15.1+ native plugin runtime; native pre-tool hooks must honor `{"action":"block"}` |
 | Aurels API | `/api/v1/actions/evaluate` and `/api/v1/actions/telemetry` in `remote` mode only |

@@ -6,6 +6,9 @@ export default {
   register(api) {
     const register = api?.on;
     if (typeof register !== "function") throw new Error("Aurels requires OpenClaw before_tool_call and after_tool_call hooks.");
+    if (!supportsPluginApprovals(api?.runtime?.version)) {
+      throw new Error("Unsupported OpenClaw runtime: Aurels requires tested version 2026.3.28 or 2026.9.6. Refusing to register security hooks on an unverified host.");
+    }
     const config = loadConfig(api.pluginConfig ?? api.getConfig?.() ?? api.config ?? {});
     const handlers = createHandlers(config, createClient(config), {
       requireApprovalSupported: supportsPluginApprovals(api?.runtime?.version),
@@ -28,14 +31,7 @@ export default {
 };
 
 function supportsPluginApprovals(version) {
-  const match = typeof version === "string" && /^(\d+)\.(\d+)\.(\d+)/.exec(version);
-  if (!match) return false;
-  const actual = match.slice(1).map(Number);
-  const minimum = [2026, 3, 28];
-  for (let index = 0; index < minimum.length; index += 1) {
-    if (actual[index] !== minimum[index]) return actual[index] > minimum[index];
-  }
-  return true;
+  return version === "2026.3.28" || version === "2026.9.6";
 }
 
 export { createClient, createHandlers, loadConfig } from "./security.js";

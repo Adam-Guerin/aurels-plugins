@@ -785,6 +785,17 @@ class PluginTests(unittest.TestCase):
         plugin.after_action("read_file", {"path": "README.md"}, {"action_id": "action-1"}, status="error")
         self.assertEqual(client.events[0]["outcome"]["status"], "failure")
 
+    def test_native_host_outcomes_are_correlated_and_classified(self):
+        for status, expected in [("ok", "success"), ("success", "success"), ("error", "failure"), ("blocked", "failure"), ("timeout", "failure"), ("cancelled", "failure"), ("unknown", "failure")]:
+            with self.subTest(status=status):
+                client = Client({"decision": "allow", "traceId": "host-trace"})
+                plugin = AurelsHermesPlugin({"api_key": "test", "mode": "remote", "telemetry_enabled": True, "trust_native_hook_order": True}, client)
+                plugin.pre_tool_call(tool_name="read_file", args={"path": "safe.txt"}, tool_call_id="native-outcome")
+                plugin.post_tool_call(tool_name="read_file", args={"path": "safe.txt"}, tool_call_id="native-outcome", status=status, result='{"ok":true}')
+                self.assertEqual(client.events[0]["outcome"]["status"], expected)
+                self.assertEqual(client.events[0]["actionId"], "native-outcome")
+                self.assertEqual(client.events[0]["traceId"], "host-trace")
+
     def test_explicit_failure_status_is_retrospected_as_failure(self):
         plugin = AurelsHermesPlugin({"mode": "retrospective", "api_key": ""}, Client())
         plugin.after_action("write_file", {"path": "important.txt"}, {"session_id": "session-status"}, success=True, status="error")

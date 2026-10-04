@@ -606,6 +606,7 @@ test("API client timeout covers a response body that stalls after headers", asyn
 test("fails startup when OpenClaw only exposes the legacy hook registrar", () => {
   const api = {
     getConfig: () => ({ apiUrl: "https://example.test", apiKey: "test", telemetry: false }),
+    runtime: { version: "2026.3.28" },
     registerHook: () => true
   };
   assert.throws(() => plugin.register(api), /before_tool_call/i);
@@ -613,6 +614,7 @@ test("fails startup when OpenClaw only exposes the legacy hook registrar", () =>
 test("uses the documented OpenClaw registrar even when it returns undefined", () => {
   const calls = [];
   const api = {
+    runtime: { version: "2026.3.28" },
     getConfig: () => ({ apiUrl: "https://example.test", apiKey: "test", telemetry: false }),
     on: (...args) => { calls.push(args); }
   };
@@ -623,6 +625,7 @@ test("uses the documented OpenClaw registrar even when it returns undefined", ()
 test("prefers api.pluginConfig over legacy config accessors", () => {
   const api = {
     pluginConfig: { apiUrl: "https://example.test", apiKey: "", mode: "local", telemetry: false },
+    runtime: { version: "2026.3.28" },
     getConfig: () => ({ apiUrl: "https://legacy.test", apiKey: "test" }),
     on: () => {}
   };
@@ -701,6 +704,11 @@ test("real OpenClaw hook runner freezes approved params or blocks when approval 
   const runtimeModule = await loadOpenClawHookRuntime(openclawRoot, { resolve, pathToFileURL });
   const hostVersion = JSON.parse(await readFile(resolve(openclawRoot, "package.json"), "utf8")).version;
   const requireApprovalSupported = supportsTestedApprovalContract(hostVersion);
+  if (!requireApprovalSupported) {
+    const registered = [];
+    assert.throws(() => plugin.register({ runtime: { version: hostVersion }, on(name) { registered.push(name); } }), /unsupported OpenClaw/i);
+    assert.deepEqual(registered, [], "unsupported real host must not advertise a registered security guard");
+  }
   const hooks = [];
   const client = { evaluate: async () => ({ decision: "allow", traceId: "trace-final-params" }), telemetry: async () => {} };
   const config = loadConfig({ apiUrl: "https://example.test", apiKey: "test", telemetry: false });
@@ -736,12 +744,7 @@ test("real OpenClaw hook runner freezes approved params or blocks when approval 
 });
 
 function supportsTestedApprovalContract(version) {
-  const actual = String(version).split(".").map(Number);
-  const minimum = [2026, 3, 28];
-  for (let index = 0; index < minimum.length; index += 1) {
-    if (actual[index] !== minimum[index]) return actual[index] > minimum[index];
-  }
-  return true;
+  return version === "2026.3.28" || version === "2026.9.6";
 }
 
 test("blocks Aurels allow when the host cannot freeze approved parameters", async () => {
@@ -753,16 +756,12 @@ test("blocks Aurels allow when the host cannot freeze approved parameters", asyn
 
 test("plugin registration detects approval support from the real host runtime version", () => {
   const handlers = [];
-  plugin.register({
+  assert.throws(() => plugin.register({
     pluginConfig: { mode: "local", apiKey: "", telemetry: false },
     runtime: { version: "2026.3.2" },
     on(name, handler) { handlers.push([name, handler]); }
-  });
-  const result = handlers.find(([name]) => name === "before_tool_call")[1]({ toolName: "read_file", params: {} });
-  return Promise.resolve(result).then((decision) => {
-    assert.equal(decision.block, true);
-    assert.equal(decision.requireApproval, undefined);
-  });
+  }), /unsupported OpenClaw/i);
+  assert.deepEqual(handlers, []);
 });
 
 test("local retrospective hook is opt-in and capability-gated", async () => {

@@ -39,6 +39,17 @@ test("release artifacts expose every marketplace plugin and verify their hashes"
     await rm(resolve(root, untrackedProbe), { force: true });
   }
   const report = await validateReleaseArtifacts(root);
+  const sbom = JSON.parse(await readFile(join(root, "dist/SBOM.spdx.json"), "utf8"));
+  const modelLock = JSON.parse(await readFile(join(root, "plugins/aurels-ollama/model.lock.json"), "utf8"));
+  const preset = sbom.packages.find((pkg) => pkg.name === "aurels-ollama");
+  const model = sbom.packages.find((pkg) => pkg.name === modelLock.model);
+  assert.ok(preset, "SBOM must describe the distributed Ollama preset");
+  assert.ok(model, "SBOM must describe the exact underlying model");
+  assert.deepEqual(model.checksums, [{ algorithm: "SHA256", checksumValue: modelLock.manifestDigest.slice(7) }]);
+  assert.equal(model.licenseConcluded, "Apache-2.0");
+  assert.deepEqual(sbom.files.find((file) => file.SPDXID === "SPDXRef-ollama-model-weights").checksums, [{ algorithm: "SHA256", checksumValue: modelLock.modelDigest.slice(7) }]);
+  assert.ok(sbom.relationships.some((item) => item.spdxElementId === preset.SPDXID && item.relationshipType === "DEPENDS_ON" && item.relatedSpdxElement === model.SPDXID));
+  for (const pkg of sbom.packages) assert.ok(sbom.relationships.some((item) => item.spdxElementId === "SPDXRef-DOCUMENT" && item.relationshipType === "DESCRIBES" && item.relatedSpdxElement === pkg.SPDXID));
   const manifest = JSON.parse(await readFile(join(root, "dist/MANIFEST.json"), "utf8"));
   assert.equal(manifest.plugins.some((entry) => /(^|\/)node_modules\//.test(entry.path)), false);
   assert.equal(manifest.plugins.some((entry) => /(?:\.egg-info\/|\/build\/)/.test(entry.path)), false);

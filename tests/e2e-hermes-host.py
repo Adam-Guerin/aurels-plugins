@@ -31,21 +31,24 @@ from run_agent import AIAgent  # noqa: E402
 import run_agent as host_run_agent  # noqa: E402
 
 MODERN_HERMES_MODULES = bool(getattr(host_run_agent, "_PLUGIN_COMPAT_LAZY", None))
-DISPATCH_TARGET = "model_tools.handle_function_call" if MODERN_HERMES_MODULES else "run_agent.handle_function_call"
+# Patch the actual tool body, leaving the host's pre/post hooks and outcome
+# classifier running. Patching handle_function_call hides post-hook regressions.
+DISPATCH_TARGET = "model_tools.registry.dispatch"
 
 
 class FakeAurelsClient:
     def __init__(self, decision=None, fail=False):
         self.decision = decision
         self.fail = fail
+        self.events = []
 
     def evaluate(self, _action):
         if self.fail:
             raise RuntimeError("synthetic network outage")
-        return {"decision": self.decision}
+        return {"decision": self.decision, "traceId": "synthetic-trace"}
 
-    def telemetry(self, _event):
-        pass
+    def telemetry(self, event):
+        self.events.append(event)
 
 
 def make_host_agent():
@@ -68,7 +71,7 @@ def make_host_agent():
     return agent
 
 
-def run_case(label, config, fake_client, expected_dispatches):
+def run_case(label, config, fake_client, expected_dispatches, expected_outcome=None, tool_result='{"ok":true}'):
     manager = PluginManager()
     manifest = PluginManifest(name="aurels-hermes", version="test", provides_hooks=["pre_tool_call", "post_tool_call"], source="user", key="aurels-hermes")
     plugin = AurelsHermesPlugin(config, fake_client)
@@ -85,9 +88,15 @@ def run_case(label, config, fake_client, expected_dispatches):
         tool_call = SimpleNamespace(id=f"synthetic-{label}", type="function", function=SimpleNamespace(name="read_file", arguments=json.dumps({"path": "safe.txt"})))
         message = SimpleNamespace(content="", tool_calls=[tool_call])
         messages = []
-        with patch(DISPATCH_TARGET, return_value='{"ok":true}') as dispatch:
+        with patch(DISPATCH_TARGET, return_value=tool_result) as dispatch:
             agent._execute_tool_calls_sequential(message, messages, f"task-{label}")
         assert dispatch.call_count == expected_dispatches, (label, dispatch.call_count, expected_dispatches, messages)
+        if expected_outcome is not None:
+            assert len(fake_client.events) == 1, (label, fake_client.events)
+            event = fake_client.events[0]
+            assert event["outcome"]["status"] == expected_outcome, (label, event)
+            assert event["actionId"] == tool_call.id, (label, event)
+            assert event["traceId"] == "synthetic-trace", (label, event)
         print(f"PASS {label}: host dispatch count={dispatch.call_count}")
     finally:
         host_plugins._plugin_manager = previous_manager
@@ -99,8 +108,10 @@ run_case("remote-outage-blocked", {"mode": "remote", "api_key": "synthetic"}, Fa
 run_case("remote-allow-blocked-without-hook-order-trust", {"mode": "remote", "api_key": "synthetic"}, FakeAurelsClient("allow"), 0)
 run_case(
     "remote-allow-dispatched-with-explicit-hook-order-trust",
-    {"mode": "remote", "api_key": "synthetic", "trust_native_hook_order": True},
+    {"mode": "remote", "api_key": "synthetic", "trust_native_hook_order": True, "telemetry_enabled": True},
     FakeAurelsClient("allow"),
     1,
+    "success",
 )
+run_case("remote-tool-error-telemetry", {"mode": "remote", "api_key": "synthetic", "trust_native_hook_order": True, "telemetry_enabled": True}, FakeAurelsClient("allow"), 1, "failure", '{"error":"synthetic tool error"}')
 run_case("retrospective-advisory-dispatched", {"mode": "retrospective", "api_key": ""}, FakeAurelsClient(), 1)

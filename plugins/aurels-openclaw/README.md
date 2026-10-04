@@ -8,9 +8,9 @@ Use your own Jev key or local Laya/Ollama model with the [self-hosted evaluator]
 
 | Component | Supported version |
 | --- | --- |
-| Plugin | 0.2.6 |
+| Plugin | 0.3.0 |
 | Node.js | 20 or newer |
-| OpenClaw | 2026.3.28 or newer, with `before_tool_call`, `after_tool_call` hooks and `requireApproval` support |
+| OpenClaw | Tested versions 2026.3.28 or 2026.9.6, with `before_tool_call`, `after_tool_call` hooks and `requireApproval` support |
 | Aurels API | `/api/v1/actions/evaluate` and `/api/v1/actions/telemetry` |
 
 ## Install
@@ -70,7 +70,7 @@ The host's configured model reviews a bounded set of redacted tool names, argume
 | HTTP 429 rate limit | Block the tool call and show the `Retry-After` wait; it is not silently retried or sent for approval. |
 | Timeout, network failure, other 4xx/5xx, invalid JSON, or another model output | `flag`: tool does not execute and requires human approval. |
 
-OpenClaw 2026.3.28+ is required for the approval directive returned by Aurels. The plugin reads the host version at startup; on older or unknown hosts it hard-blocks decisions that require an approval or parameter freeze rather than letting unsupported fields be ignored. This PC currently has OpenClaw 2026.3.2: it can load the plugin, but is below the supported minimum, so policy-allowed remote actions are also blocked. Upgrade OpenClaw before using the integration.
+Aurels accepts only OpenClaw 2026.3.28 and 2026.9.6. It checks the actual host version at startup and refuses to register hooks on any other version, including unknown versions, prereleases and 2026.6.5. Hook compatibility is not assumed between tested releases. Use a supported version and verify that OpenClaw successfully loaded the guard before enabling agent tools; a plugin load error means the agent is not protected. Explicitly fail agent startup when the security plugin cannot load.
 
 Remote mode requires an HTTPS API URL, or HTTP on loopback (`127.0.0.1`, `localhost`, `::1`) for a self-hosted evaluator, with no embedded credentials. Responses are limited to 1 MiB before JSON parsing.
 

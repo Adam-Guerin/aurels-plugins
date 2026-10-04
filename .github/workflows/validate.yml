@@ -43,6 +43,8 @@ jobs:
         run: python -m unittest discover -s tests
       - name: Verify self-hosted evaluator protocols and CLI on Windows
         run: npm run test:evaluator
+      - name: Verify release contracts and locked Ollama installer on Windows
+        run: npm run test:release-contracts
       - name: Verify Node and Python queue caps across independent Windows processes
         run: npm run test:e2e:telemetry
 
@@ -86,6 +88,8 @@ jobs:
         run: |
           python -m json.tool marketplace.json > /dev/null
           python -m json.tool .agents/plugins/marketplace.json > /dev/null
+      - name: Verify synchronized catalogues, supported hosts and Ollama lock
+        run: npm run test:release-contracts
       - name: Validate plugin manifests
         shell: bash
         run: |

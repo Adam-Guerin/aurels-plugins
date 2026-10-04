@@ -222,7 +222,7 @@ class AurelsHermesPlugin:
         pending = self._pop_pending(action_id)
         trace_id = pending.get("trace_id") if pending else None
         if status is not None:
-            success = status == "success"
+            success = _hook_succeeded(status, None, None)
         if self.config.mode == "retrospective":
             self._remember_retrospective(action_id, action_name, arguments, context, success)
         self._telemetry(action_id, action_name, arguments, context, "success" if success else "failure", trace_id)
@@ -507,7 +507,7 @@ def _validate_review(review):
 
 def _hook_succeeded(status, error, result):
     if status is not None:
-        return status == "success"
+        return status in ("ok", "success")
     if error is not None:
         return False
     if isinstance(result, dict):

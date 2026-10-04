@@ -41,8 +41,24 @@ const sbomPackages = [
   ["aurels-framework-integrations", "0.1.0"], ["aurels-crewai", "0.1.0"],
   ["@aurels/langgraph-guard", "0.1.0"], ["@aurels/openai-agents-guard", "0.1.0"], ["@aurels/mcp-proxy", "0.1.0"],
   ["aurels-claude-code", "0.1.0"], ["aurels-codex-guard", "0.1.0"], ["@aurels/evaluator", "0.1.0"],
-].map(([name, version]) => ({ SPDXID: `SPDXRef-${name.replaceAll(/[^A-Za-z0-9.-]/g, "-")}`, name, versionInfo: version, downloadLocation: "NOASSERTION", licenseConcluded: "MIT" }));
-await writeFile(join(dist, "SBOM.spdx.json"), JSON.stringify({ SPDXID: "SPDXRef-DOCUMENT", spdxVersion: "SPDX-2.3", name: "aurels-plugins", documentNamespace: `https://github.com/Adam-Guerin/aurels-plugins/releases/${commit}`, dataLicense: "CC0-1.0", creationInfo: { created: manifest.generatedAt, creators: ["Tool: aurels release manifest"] }, packages: sbomPackages }, null, 2) + "\n");
+].map(([name, version]) => ({ SPDXID: `SPDXRef-${name.replaceAll(/[^A-Za-z0-9.-]/g, "-")}`, name, versionInfo: version, downloadLocation: "NOASSERTION", filesAnalyzed: false, licenseConcluded: "MIT" }));
+const ollamaVersion = JSON.parse(await readFile(join(root, "plugins/aurels-ollama/.codex-plugin/plugin.json"), "utf8")).version;
+const modelLock = JSON.parse(await readFile(join(root, "plugins/aurels-ollama/model.lock.json"), "utf8"));
+sbomPackages.push(
+  { SPDXID: "SPDXRef-aurels-ollama", name: "aurels-ollama", versionInfo: ollamaVersion, downloadLocation: "NOASSERTION", filesAnalyzed: false, licenseConcluded: "MIT" },
+  { SPDXID: "SPDXRef-ollama-base-model", name: modelLock.model, versionInfo: modelLock.manifestDigest,
+    downloadLocation: modelLock.source, filesAnalyzed: false, licenseConcluded: modelLock.license,
+    checksums: [{ algorithm: "SHA256", checksumValue: modelLock.manifestDigest.slice(7) }] },
+);
+const relationships = sbomPackages.map((pkg) => ({ spdxElementId: "SPDXRef-DOCUMENT", relationshipType: "DESCRIBES", relatedSpdxElement: pkg.SPDXID }));
+relationships.push(
+  { spdxElementId: "SPDXRef-aurels-ollama", relationshipType: "DEPENDS_ON", relatedSpdxElement: "SPDXRef-ollama-base-model" },
+  { spdxElementId: "SPDXRef-ollama-base-model", relationshipType: "CONTAINS", relatedSpdxElement: "SPDXRef-ollama-model-weights" },
+);
+const sbomFiles = [{ SPDXID: "SPDXRef-ollama-model-weights", fileName: "qwen2.5.gguf",
+  checksums: [{ algorithm: "SHA256", checksumValue: modelLock.modelDigest.slice(7) }],
+  licenseConcluded: modelLock.license, licenseInfoInFiles: [modelLock.license], copyrightText: "NOASSERTION" }];
+await writeFile(join(dist, "SBOM.spdx.json"), JSON.stringify({ SPDXID: "SPDXRef-DOCUMENT", spdxVersion: "SPDX-2.3", name: "aurels-plugins", documentNamespace: `https://github.com/Adam-Guerin/aurels-plugins/releases/${commit}`, dataLicense: "CC0-1.0", creationInfo: { created: new Date(manifest.generatedAt).toISOString(), creators: ["Tool: aurels release manifest"] }, comment: "Maintained plugin component inventory and pinned Ollama model; model weights are fetched separately by Ollama. Host/runtime transitive dependencies are outside this inventory.", packages: sbomPackages, files: sbomFiles, relationships }, null, 2) + "\n");
 console.log(`Release metadata generated for ${entries.length} files at ${dist}`);
 
 function safeGit(...args) { try { return execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim(); } catch { return "unavailable"; } }

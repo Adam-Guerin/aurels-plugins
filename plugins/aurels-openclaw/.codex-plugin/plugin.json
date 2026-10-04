@@ -1,6 +1,6 @@
 {
   "name": "aurels-openclaw",
-  "version": "0.2.6",
+  "version": "0.3.0",
   "description": "Aurels integration for OpenClaw.",
   "author": {
     "name": "Aurels"

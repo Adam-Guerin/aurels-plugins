@@ -4,7 +4,7 @@ import { access, mkdtemp, readFile, rm } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { tmpdir } from "node:os";
 
-const requiredOllamaFiles = ["Modelfile.aurels", "README.md", ".codex-plugin/plugin.json"];
+const requiredOllamaFiles = ["Modelfile.aurels", "README.md", ".codex-plugin/plugin.json", "install.mjs", "model.lock.json", "model.template", "MODEL-LICENSE.txt"];
 const requiredIntegrationFiles = [
   "integrations/claude-code/hooks/aurel-hook.mjs",
   "integrations/codex/aurel-codex-plugin/scripts/aurel-protected-mcp.mjs",

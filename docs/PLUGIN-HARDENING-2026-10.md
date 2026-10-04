@@ -84,3 +84,32 @@ This pass improves correctness at the tested boundaries. It does not make every 
 5. **Policies and secrets:** redaction is heuristic. Evaluation sees original arguments. Live policy quality, API compatibility under production load, credential provisioning, and model inference need deployment validation. An explicit include list narrows protection; disabling a guard disables its protection.
 
 The [support matrix](SUPPORT-MATRIX.md) separates supported packages from experimental adapters and records what was actually tested.
+
+## v0.3.0 audit fixes and release acceptance
+
+The follow-up audit reproduced three remaining regressions before their fixes:
+Hermes `ok` became failure telemetry, the marketplace entry points differed,
+and untested OpenClaw runtimes could register a security guard. The preset's
+invalid base tag and missing SBOM entry were also corrected.
+
+- Hermes native E2E now patches only the tool body, preserving the host's real pre/post dispatch and outcome classifier. Seven scenarios pass on pinned host `f97608f178d1ffeca59860195ab7da295f7c8e5f`, including success/failure outcomes with exact action and trace correlation.
+- OpenClaw registration and npm peer support accept exactly 2026.3.28 and 2026.9.6. Tests also verify refusal of 2026.6.5, older hosts, unknown versions and prereleases before registering hooks. An agent must stop when the plugin cannot load; continuing without a loaded guard is outside this contract.
+- Both marketplace JSON files have identical plugin identities, sources and policies, enforced in CI on Linux and Windows.
+- The Ollama preset uses a locked Qwen 2.5 7B Q4_K_M manifest and GGUF digest. The installer checks template/license bytes, rejects changed model manifests and creates from the immutable blob. Five actual local inference cases pass on the installed preset with Ollama 0.24.0: authorized read allows, three unsafe reads/commands block, and unauthorized writing requires review. Warm evaluation takes roughly 0.6–0.8 seconds on the tested RX 6800; this is smoke-test evidence, not a benchmark or general policy guarantee. Disposable smoke models are removed.
+- The SPDX inventory describes the preset and base model, manifest/weight checksums and dependency relationships. Exact metadata bytes are preserved across platform checkouts. Release version checks align supported plugin manifests/packages with the release tag.
+
+The complete local `npm test` passed **362 reported tests**, plus seven native
+Hermes scenarios, fourteen CrewAI host scenarios and nested installed-package
+checks. OpenClaw's legacy/current host checks also passed separately. Nine
+archives were rebuilt and checked; the Ollama ZIP contains its installer,
+lock, template and upstream model license. Jev/Laya live credentials and
+production Aurels policies remain unverified.
+
+Reproduce the optional real-weight check with a running local Ollama server:
+
+```bash
+AURELS_OLLAMA_URL=http://127.0.0.1:11434 node scripts/verify-ollama-preset-live.mjs
+```
+
+The script installs a uniquely named model, checks five synthetic evaluations
+without dispatching tools, prints the report and removes the disposable model.

@@ -2,9 +2,9 @@
 
 | Package | Version | Runtime | Status | Security boundary |
 | --- | --- | --- | --- | --- |
-| Aurels OpenClaw | 0.2.6 | Node 20+, OpenClaw 2026.3.28+ | Supported | Hook-runner contract tested on 2026.3.28 and 2026.9.6; 2026.3.2 explicitly fails closed. One-shot approval freezes the exact evaluated parameters; host-trusted/native paths outside the ordinary approval chain remain outside scope |
-| Aurels Hermes | 0.2.6 | Python 3.11+, pinned Hermes native hook host | Supported with constraints | Native refusal tested through real dispatch. Remote native allow is blocked unless hook ordering is explicitly trusted. Application-owned synchronous `run_protected` binds evaluation to its argument snapshot. `retrospective` is advisory only |
-| Aurels Ollama | 0.2.6 | Ollama with `qwen3-coder:q3` | Supported | Local analysis only; not an execution hook |
+| Aurels OpenClaw | 0.3.0 | Node 20+, OpenClaw 2026.3.28 or 2026.9.6 | Supported on these exact hosts | Hook-runner contract tested on both releases; other versions are refused at plugin startup. A plugin load failure must stop agent startup. One-shot approval freezes the exact evaluated parameters; host-trusted/native paths outside the ordinary approval chain remain outside scope |
+| Aurels Hermes | 0.3.0 | Python 3.11+, pinned Hermes native hook host | Supported with constraints | Native refusal tested through real dispatch. Remote native allow is blocked unless hook ordering is explicitly trusted. Application-owned synchronous `run_protected` binds evaluation to its argument snapshot. `retrospective` is advisory only |
+| Aurels Ollama | 0.3.0 | Node 22+ installer, Ollama 0.24.0 with locked `qwen2.5:7b-instruct-q4_K_M` | Supported analysis preset | Manifest, weights, template and license pinned by SHA-256; installed preset checked with real local inference. Local analysis only; not an execution hook |
 
 ## Self-hosted evaluation
 
@@ -23,4 +23,4 @@ These packages remain experimental and outside the supported marketplace release
 | OpenAI Agents | 0.1.0 | Agents SDK 0.18.0 | Real Runner dispatch using synthetic model responses; repeated with an installed npm archive; only wrapped function tools are covered |
 | MCP proxy | 0.1.0 | MCP JavaScript SDK 1.32.0 | Real newline stdio initialization/list/call, refusal, rewrite, cancellation, pending cap, and structured errors; repeated with an installed npm archive; only proxied servers/calls are covered |
 
-Hermes CI pins host commit `f97608f178d1ffeca59860195ab7da295f7c8e5f`. The automated suite uses synthetic policy/model responses and tool handlers; it does not validate live Aurels policy quality, production credentials, or every host execution path. Local Ollama inference was checked separately through the evaluator, using installed weights without a download; it does not validate the `qwen3-coder:q3` analysis preset. See the [hardening report and reproduction commands](PLUGIN-HARDENING-2026-10.md).
+Hermes CI pins host commit `f97608f178d1ffeca59860195ab7da295f7c8e5f`. The automated suite uses synthetic policy/model responses and tool bodies while the actual host dispatcher, outcome classifier and pre/post hooks run. It verifies both dispatch and correlated success/failure telemetry. It does not validate live Aurels policy quality, production credentials, or every host execution path. The locked Ollama preset is checked separately with real inference through the evaluator. Jev and Laya protocols are tested with fixtures; live credentials and Laya weights were not available. See the [hardening report and reproduction commands](PLUGIN-HARDENING-2026-10.md).
