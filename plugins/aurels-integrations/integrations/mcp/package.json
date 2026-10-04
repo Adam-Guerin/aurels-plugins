@@ -1,0 +1,12 @@
+{
+  "name": "@aurels/mcp-proxy",
+  "version": "0.1.0",
+  "description": "Pre-execution Aurels policy proxy for MCP stdio servers",
+  "license": "MIT",
+  "type": "module",
+  "files": ["src/aurel-mcp-proxy.mjs", "README.md"],
+  "bin": {
+    "aurels-mcp-proxy": "src/aurel-mcp-proxy.mjs"
+  },
+  "engines": { "node": ">=20" }
+}

@@ -1,0 +1,3 @@
+# These bytes are checked against the upstream model's SHA-256 layers.
+plugins/aurels-ollama/model.template -text
+plugins/aurels-ollama/MODEL-LICENSE.txt -text

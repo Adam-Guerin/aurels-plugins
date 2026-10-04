@@ -1,0 +1,30 @@
+{
+  "description": "Aurels policy checks for Codex local function tools.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node --input-type=module -e \"import((await import('node:url')).pathToFileURL(process.env.PLUGIN_ROOT + '/hooks/aurel-codex-hook.mjs').href)\"",
+            "timeout": 35,
+            "statusMessage": "Checking action with Aurels"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node --input-type=module -e \"import((await import('node:url')).pathToFileURL(process.env.PLUGIN_ROOT + '/hooks/aurel-codex-hook.mjs').href)\"",
+            "timeout": 35
+          }
+        ]
+      }
+    ]
+  }
+}

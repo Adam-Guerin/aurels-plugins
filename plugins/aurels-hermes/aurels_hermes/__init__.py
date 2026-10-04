@@ -1,4 +1,4 @@
-from .plugin import AurelsHermesPlugin
+from .plugin import AurelsHermesPlugin, AurelsToolBlockedError
 
 
 def register(ctx):
@@ -7,4 +7,4 @@ def register(ctx):
     return plugin
 
 
-__all__ = ["AurelsHermesPlugin", "register"]
+__all__ = ["AurelsHermesPlugin", "AurelsToolBlockedError", "register"]

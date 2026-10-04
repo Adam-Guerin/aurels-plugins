@@ -1,0 +1,34 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+  - package-ecosystem: npm
+    directory: /plugins/aurels-integrations
+    schedule:
+      interval: weekly
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
+  - package-ecosystem: pip
+    directory: /plugins/aurels-hermes
+    schedule:
+      interval: weekly
+    groups:
+      hermes-python-build:
+        patterns:
+          - "*"
+  - package-ecosystem: pip
+    directory: /plugins/aurels-integrations/integrations/crewai
+    schedule:
+      interval: weekly
+    groups:
+      crewai-python-build:
+        patterns:
+          - "*"

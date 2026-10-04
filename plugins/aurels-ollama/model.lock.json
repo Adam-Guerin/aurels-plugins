@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "model": "qwen2.5:7b-instruct-q4_K_M",
+  "manifestDigest": "sha256:845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+  "modelDigest": "sha256:2bada8a7450677000f678be90653b85d364de7db25eb5ea54136ada5f3933730",
+  "modelBytes": 4683073952,
+  "templateDigest": "sha256:eb4402837c7829a690fa845de4d7f3fd842c2adee476d5341da8a46ea9255175",
+  "licenseDigest": "sha256:832dd9e00a68dd83b3c3fb9f5588dad7dcf337a0db50f7d9483f310cd292e92e",
+  "license": "Apache-2.0",
+  "source": "https://ollama.com/library/qwen2.5:7b-instruct-q4_K_M"
+}

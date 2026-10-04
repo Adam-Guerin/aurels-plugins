@@ -1,0 +1,31 @@
+{
+  "name": "aurels-codex-guard",
+  "version": "0.1.0",
+  "description": "Aurels security guard for Codex tool execution.",
+  "author": {
+    "name": "Aurels",
+    "url": "https://github.com/Adam-Guerin/aurels-plugins"
+  },
+  "homepage": "https://github.com/Adam-Guerin/aurels-plugins",
+  "repository": "https://github.com/Adam-Guerin/aurels-plugins",
+  "license": "MIT",
+  "keywords": ["aurels", "security", "mcp", "codex", "agents"],
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Aurels Guard for Codex",
+    "shortDescription": "Guard Codex tools with Aurels.",
+    "longDescription": "Checks supported Codex tool calls against Aurels policy before execution and records post-tool telemetry.",
+    "developerName": "Aurels",
+    "category": "Security",
+    "capabilities": ["MCP", "Security", "Telemetry"],
+    "websiteURL": "https://github.com/Adam-Guerin/aurels-plugins",
+    "privacyPolicyURL": "https://openai.com/policies/row-privacy-policy/",
+    "termsOfServiceURL": "https://openai.com/policies/row-terms-of-use/",
+    "defaultPrompt": [
+      "Configure Aurel for this MCP server.",
+      "Check protected MCP tool telemetry.",
+      "Explain Aurel's Codex guard."
+    ],
+    "brandColor": "#111827"
+  }
+}

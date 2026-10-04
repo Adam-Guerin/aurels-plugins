@@ -1,0 +1,7 @@
+[
+  { "name": "bearer", "input": "Authorization: Bearer syntheticBearerCredential123", "secret": "syntheticBearerCredential123" },
+  { "name": "openai-project-key", "input": "sk-proj-syntheticProjectKey123456", "secret": "sk-proj-syntheticProjectKey123456" },
+  { "name": "aws-access-key-id", "input": "AKIA1234567890ABCDEF", "secret": "AKIA1234567890ABCDEF" },
+  { "name": "github-token", "input": "ghp_syntheticGitHubToken1234567890abcdef", "secret": "ghp_syntheticGitHubToken1234567890abcdef" },
+  { "name": "jwt", "input": "eyJzZWNyZXQxMjM.eyJjbGFpbXMxMjM.c2lnbmF0dXJlMTIz", "secret": "eyJzZWNyZXQxMjM.eyJjbGFpbXMxMjM.c2lnbmF0dXJlMTIz" }
+]

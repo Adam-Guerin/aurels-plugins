@@ -1,0 +1,23 @@
+{
+  "name": "@aurels/openai-agents-guard",
+  "version": "0.1.0",
+  "description": "Pre-execution Aurels guard for OpenAI Agents SDK function tools",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/openai-agents/src/index.js",
+  "types": "dist/openai-agents/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/openai-agents/src/index.d.ts",
+      "import": "./dist/openai-agents/src/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "prepack": "tsc --project tsconfig.build.json"
+  },
+  "peerDependencies": {
+    "@openai/agents": ">=0.18.0"
+  },
+  "engines": { "node": ">=20" }
+}

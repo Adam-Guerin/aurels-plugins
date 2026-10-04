@@ -1,6 +1,6 @@
 {
   "name": "@aurels/aurels",
-  "version": "0.2.6",
+  "version": "0.3.0",
   "description": "Independent Aurels security hook for OpenClaw tool calls.",
   "type": "module",
   "main": "./src/index.js",
@@ -8,10 +8,11 @@
   "files": ["src", "docs", "README.md", "CHANGELOG.md", "LICENSE", "openclaw.plugin.json", ".env.example"],
   "scripts": {
     "test": "node --test tests/security.test.js && node --test tests/integration.test.js",
+    "test:e2e:host": "node --test --test-name-pattern=\"real OpenClaw\" tests/security.test.js",
     "check": "node --check src/index.js && node --check src/security.js"
   },
   "peerDependencies": {
-    "openclaw": ">=2026.3.28"
+    "openclaw": "2026.3.28 || 2026.9.6"
   },
   "openclaw": {
     "extensions": ["./src/index.js"]

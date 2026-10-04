@@ -11,3 +11,7 @@ __pycache__/
 .venv/
 build/
 *.egg-info/
+*.tsbuildinfo
+.tmp-codex-state/
+.ci/
+.aurels-evaluator/

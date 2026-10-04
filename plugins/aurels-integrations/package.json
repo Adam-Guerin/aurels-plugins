@@ -1,0 +1,25 @@
+{
+  "name": "@aurels/framework-integrations",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Experimental Aurels adapters for agent frameworks",
+  "scripts": {
+    "test:python": "python integrations/crewai/tests/test_crewai_guard.py && python legacy/hermes/tests/test_aurel_hermes.py",
+    "test:shared-guard": "tsx --test tests/shared-guard.test.ts",
+    "test:host-contract": "tsx --test tests/host-contract.test.ts tests/agent-runners.test.ts",
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "node --test --test-concurrency=1 tests/e2e-prefix-enforcement.test.mjs tests/codex-hook.test.mjs tests/mcp-sdk.test.mjs",
+    "test": "npm run typecheck && npm run test:python && npm run test:shared-guard && npm run test:host-contract && npm run test:evaluator && npm run test:e2e",
+    "test:evaluator": "tsx --test tests/evaluator-consumers.test.ts"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@langchain/core": "^1.2.13",
+    "@langchain/langgraph": "^1.4.18",
+    "@modelcontextprotocol/sdk": "1.32.0",
+    "@openai/agents": "^0.18.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "zod": "^4.6.5"
+  }
+}

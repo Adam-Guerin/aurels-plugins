@@ -2,7 +2,7 @@
 
 ## Safe rollout
 
-1. Install in a non-production Hermes environment with `AURELS_MODE=remote`.
+1. Install in a non-production Hermes environment with `AURELS_MODE=remote`. Native dispatch blocks even a remote `allow` unless `AURELS_HERMES_TRUST_NATIVE_HOOK_ORDER=true` is set after verifying that no later hook can mutate arguments.
 2. Run `python -m unittest discover -s tests`.
 3. Test an allowed action and a known blocked action. Assert that the action handler is not called in the blocked case.
 4. Verify telemetry does not contain keys or values that should remain local.
@@ -10,7 +10,7 @@
 
 ## Failure handling
 
-Any unavailable, malformed, oversized, or non-success Aurels response becomes `{"action": "approve", "message": "..."}`; no action should run.
+Any unavailable, malformed, oversized, or non-success Aurels response becomes a nonempty native Hermes block; no action should run. A successful remote `allow` is also blocked unless native hook ordering has been explicitly trusted, because this host contract cannot freeze or revalidate final arguments.
 
 Remote endpoints must use HTTPS and must not contain embedded credentials. Response bodies are capped at 1 MiB before parsing.
 
@@ -24,4 +24,4 @@ Remove the plugin from the host's pre-action path or uninstall it with `python -
 
 ## Scope boundary
 
-Only actions routed through the adapter's `before_action` call are protected. Direct side effects, subprocesses, or filesystem operations outside that path are out of scope and need separate controls.
+Only actions routed through the adapter's `before_action` call are protected. Direct side effects, subprocesses, or filesystem operations outside that path are out of scope and need separate controls. Enabling native remote dispatch trusts that no later hook changes the evaluated arguments; it does not create an immutable permit or remove host-level bypasses.
