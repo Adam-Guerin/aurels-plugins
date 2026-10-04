@@ -106,14 +106,14 @@ jobs:
         working-directory: plugins/aurels-openclaw
         env:
           OPENCLAW_PACKAGE_ROOT: ${{ github.workspace }}/.ci/openclaw/node_modules/openclaw
-        run: npm run test:e2e:openclaw-host
+        run: npm run test:e2e:host
       - name: Install an older OpenClaw runtime for fail-closed compatibility coverage
         run: npm install --prefix .ci/openclaw-legacy --no-save --ignore-scripts openclaw@2026.3.2
       - name: Verify unsupported OpenClaw runtime blocks actions it cannot approve
         working-directory: plugins/aurels-openclaw
         env:
           OPENCLAW_PACKAGE_ROOT: ${{ github.workspace }}/.ci/openclaw-legacy/node_modules/openclaw
-        run: npm run test:e2e:openclaw-host
+        run: npm run test:e2e:host
       - name: Use the supported Node runtime for current OpenClaw
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -124,7 +124,7 @@ jobs:
         working-directory: plugins/aurels-openclaw
         env:
           OPENCLAW_PACKAGE_ROOT: ${{ github.workspace }}/.ci/openclaw-current/node_modules/openclaw
-        run: npm run test:e2e:openclaw-host
+        run: npm run test:e2e:host
       - name: Test Hermes plugin
         working-directory: plugins/aurels-hermes
         run: python -m unittest discover -s tests

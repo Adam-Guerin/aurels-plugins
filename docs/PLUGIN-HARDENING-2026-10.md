@@ -73,6 +73,8 @@ End-to-end default HTTP clients also exposed an unset `action.type` being serial
 
 This follow-up supersedes the earlier statements that Codex CLI dispatch and all local inference were unverified. The final October 4 root `npm test` passed **352 reported tests**, plus the native Hermes/CrewAI scenarios and nested installed-package checks. The nine archives were rebuilt, installed/extracted, and checked; installed evaluator verification and extracted Codex native-session dispatch passed again. Locked npm dependency auditing reported zero vulnerabilities. Workflow YAML parsed and the final diff passed whitespace checks. Remote GitHub Actions is configured but is not included in these local results.
 
+PR #2's first GitHub run independently passed Codex native sessions on Linux and Windows, the Windows Hermes/evaluator/queue lane and the installed CrewAI host lane. The marketplace lane stopped at an incorrect package script name before the remaining steps; its three OpenClaw host calls now invoke the package's actual `test:e2e:host`, with a quoted test-name pattern. The complete marketplace rerun is separate evidence from the local suite.
+
 This pass improves correctness at the tested boundaries. It does not make every integration universally production-ready:
 
 1. **Hermes native hooks:** later callbacks can still mutate host-owned arguments. Default remote allow is refused; explicit ordering trust requires an operator to control the complete callback chain. Use the application-owned synchronous dispatcher when you need snapshot-bound execution. Local mode is intentionally restrictive; retrospective mode is advisory.

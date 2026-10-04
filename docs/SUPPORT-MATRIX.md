@@ -17,7 +17,7 @@ These packages remain experimental and outside the supported marketplace release
 | Adapter | Package version | Tested host | Evidence and remaining boundary |
 | --- | --- | --- | --- |
 | Claude Code | 0.1.0 | Native hook-format command scripts | Packaged pre/post scripts against a synthetic API; full Claude Code sessions and interactions between hooks unverified |
-| Codex Guard | 0.1.0 | Codex CLI 0.160.0 | Real CLI dispatch with native hook declarations and synthetic model/policy servers: allow writes a disposable file; block/review/outage prevent it; packaged scripts repeated. Windows verified locally, Linux and Windows configured in CI. Hook trust UI and marketplace discovery unverified; approval and rewrite conservatively denied |
+| Codex Guard | 0.1.0 | Codex CLI 0.160.0 | Real CLI dispatch with native hook declarations and synthetic model/policy servers: allow writes a disposable file; block/review/outage prevent it; packaged scripts repeated. Windows verified locally and Linux/Windows verified in GitHub CI. Hook trust UI and marketplace discovery unverified; approval and rewrite conservatively denied |
 | CrewAI | 0.1.0 | CrewAI 1.15.23 | Real `BaseTool.run` and `BaseTool.arun`, including approval/refusal/rewrite/outage; installed wheel tested in CI; unwrapped tools remain outside the boundary |
 | LangGraph | 0.1.0 | LangGraph 1.4.18 / core 1.2.13 | Compiled graph runs with synthetic model messages and protected ToolNode; repeated with an installed npm archive; other graph nodes/tools must be protected separately |
 | OpenAI Agents | 0.1.0 | Agents SDK 0.18.0 | Real Runner dispatch using synthetic model responses; repeated with an installed npm archive; only wrapped function tools are covered |
