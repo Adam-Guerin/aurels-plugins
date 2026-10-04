@@ -13,13 +13,13 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.11"
       - name: Install experimental adapter contract-test dependencies
@@ -33,7 +33,7 @@ jobs:
       - name: Install Codex runtime for native-session E2E
         run: npm install --prefix .ci/codex --no-save --ignore-scripts @openai/codex@0.160.0
       - name: Check out Hermes host runtime for native-dispatch E2E
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: NousResearch/hermes-agent
           ref: f97608f178d1ffeca59860195ab7da295f7c8e5f
@@ -75,9 +75,9 @@ jobs:
           sha256sum plugins/aurels-hermes/dist/* plugins/aurels-openclaw/*.tgz >> dist/SHA256SUMS
           sort -k2 -o dist/SHA256SUMS dist/SHA256SUMS
           test -z "$(cut -d' ' -f3- dist/SHA256SUMS | sort | uniq -d)"
-      - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
       - run: cosign sign-blob --yes --output-signature dist/SHA256SUMS.sig --output-certificate dist/SHA256SUMS.pem dist/SHA256SUMS
-      - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: |
             dist/aurels-ollama-plugin.zip
@@ -91,7 +91,7 @@ jobs:
             dist/aurels-evaluator-0.1.0.tgz
             plugins/aurels-hermes/dist/*.whl
             plugins/aurels-openclaw/*.tgz
-      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+      - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           name: Aurels Plugins ${{ github.ref_name }}
           body_path: docs/RELEASE-NOTES-${{ github.ref_name }}.md
