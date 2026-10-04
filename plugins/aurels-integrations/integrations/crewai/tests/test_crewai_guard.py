@@ -77,6 +77,18 @@ class ThrowingIteratorMapping(Mapping):
 
 
 class CrewAITests(unittest.TestCase):
+    def test_rejects_remote_plaintext_before_using_credentials(self):
+        for api_url in ("http://api.example", "http://192.0.2.1", "https://user:secret@example.com"):
+            with self.subTest(api_url=api_url), self.assertRaises(ValueError):
+                AurelCrewAIGuard(AurelCrewAIConfig(api_url=api_url, api_key="private-key"))
+        for api_url in ("https://api.example", "http://127.0.0.1:8000", "http://localhost:8000", "http://[::1]:8000"):
+            AurelCrewAIGuard(AurelCrewAIConfig(api_url=api_url, api_key="local-token"))
+
+    def test_malformed_https_endpoints_cannot_enable_fail_open(self):
+        for api_url in ("https:///missing-host", "https://localhost:not-a-port", "https://localhost:99999"):
+            with self.subTest(api_url=api_url), self.assertRaises(ValueError):
+                AurelCrewAIGuard(AurelCrewAIConfig(api_url=api_url, api_key="local-token", fail_mode="open"))
+
     def test_failure_logs_do_not_expose_raw_transport_errors(self):
         class FailingGuard(AurelCrewAIGuard):
             def _post_json(self, path, payload):

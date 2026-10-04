@@ -8,5 +8,5 @@
   "bin": { "aurels-evaluator": "src/cli.mjs" },
   "exports": { ".": "./src/server.mjs" },
   "files": ["src", "README.md"],
-  "scripts": { "test": "node --test ../../tests/model-evaluator.test.mjs ../../tests/evaluator-cli.test.mjs" }
+  "scripts": { "test": "node --test ../../tests/model-evaluator.test.mjs ../../tests/evaluator-cli.test.mjs ../../tests/evaluator-readiness.test.mjs" }
 }

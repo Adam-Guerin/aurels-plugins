@@ -11,7 +11,8 @@
     "test:e2e:crewai": "python tests/e2e-crewai-package.py",
     "test:e2e:crewai-host": "node scripts/run-crewai-host-e2e.mjs",
     "test:e2e:telemetry": "node --test tests/e2e-telemetry-subprocess.test.mjs",
-    "test": "npm run test:evaluator && npm run test:openclaw && npm run test:e2e:openclaw-host && npm run test:hermes && npm run test:e2e:hermes && npm run test:e2e:hermes-host && npm run test:e2e:crewai && npm run test:e2e:crewai-host && npm run test:e2e:telemetry && npm run test:integrations && npm run test:marketplace && npm run test:e2e:artifacts",
+    "test": "npm run test:evaluator && npm run test:e2e:codex-session && npm run test:openclaw && npm run test:e2e:openclaw-host && npm run test:hermes && npm run test:e2e:hermes && npm run test:e2e:hermes-host && npm run test:e2e:crewai && npm run test:e2e:crewai-host && npm run test:e2e:telemetry && npm run test:integrations && npm run test:marketplace && npm run test:e2e:artifacts",
+    "test:e2e:codex-session": "node --test tests/e2e-codex-session.test.mjs",
     "test:integrations": "npm --prefix plugins/aurels-integrations test",
     "test:marketplace": "node -e \"const fs=require('fs');const m=JSON.parse(fs.readFileSync('.agents/plugins/marketplace.json'));if(!m.plugins.some(p=>p.name==='aurels-ollama')||!m.plugins.some(p=>p.name==='aurels-codex-guard'))process.exit(1);JSON.parse(fs.readFileSync('plugins/aurels-ollama/.codex-plugin/plugin.json'));JSON.parse(fs.readFileSync('plugins/aurels-integrations/integrations/codex/aurel-codex-plugin/plugin.json'));const dirs=['claude-code','codex','crewai','langgraph','mcp','openai-agents'];if(dirs.some(d=>!fs.existsSync('plugins/aurels-integrations/integrations/'+d)))process.exit(1);\"",
     "test:e2e:artifacts": "node --test tests/e2e-artifacts.test.mjs",
@@ -24,7 +25,7 @@
     "package:openai-agents": "node scripts/package-npm-integration.mjs openai-agents",
     "package:mcp": "node scripts/package-npm-integration.mjs mcp",
     "release:manifest": "node scripts/generate-release-manifest.mjs",
-    "test:evaluator": "node --test tests/model-evaluator.test.mjs tests/evaluator-cli.test.mjs",
+    "test:evaluator": "node --test tests/model-evaluator.test.mjs tests/evaluator-cli.test.mjs tests/evaluator-readiness.test.mjs",
     "package:evaluator": "node scripts/package-evaluator.mjs"
   }
 }

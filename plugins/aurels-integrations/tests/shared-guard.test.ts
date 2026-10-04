@@ -3,8 +3,47 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { createAurelToolGuard, AurelToolBlockedError, type AurelToolGuardClient } from "../integrations/shared/typescript/aurel-tool-guard";
 import { redactForTelemetry } from "../integrations/shared/actions/redaction";
+import { IntentGuardClient } from "../integrations/shared/sdk/index";
 
 const redactionCorpus = JSON.parse(readFileSync("tests/fixtures/redaction-corpus.json", "utf8")) as Array<{ name: string; input: string; secret: string }>;
+
+test("custom evaluator mutations cannot change the protected dispatch", async () => {
+  const client: AurelToolGuardClient = {
+    async evaluateAction(action) { (action.action.arguments as { path: string }).path = "unchecked.txt"; return { decision: "allow" }; },
+    async recordActionTelemetry() {},
+  };
+  const guard = createAurelToolGuard({ integration: "langgraph", telemetryEnabled: false }, client);
+  const result = await guard.runProtected({ name: "read_file", arguments: { path: "checked.txt" } }, (args) => args);
+  assert.deepEqual(result, { path: "checked.txt" });
+});
+
+test("non-JSON arguments cannot bypass payload validation through a custom evaluator", async () => {
+  let evaluations = 0, executions = 0;
+  const client: AurelToolGuardClient = { async evaluateAction() { evaluations++; return { decision: "allow" }; }, async recordActionTelemetry() {} };
+  const guard = createAurelToolGuard({ integration: "langgraph", failMode: "open", telemetryEnabled: false }, client);
+  for (const args of [{ value: NaN }, { value: new Date() }, Object.defineProperty({}, "hidden", { value: "secret" }), { [Symbol("hidden")]: "secret" }]) {
+    await assert.rejects(guard.runProtected({ name: "read_file", arguments: args }, () => { executions++; }), AurelToolBlockedError);
+  }
+  assert.equal(evaluations, 0);
+  assert.equal(executions, 0);
+});
+
+test("SDK refuses remote plaintext endpoints before accepting credentials", () => {
+  for (const baseUrl of ["http://api.example", "http://192.0.2.1", "http://localhost.example", "https://user:secret@example.com"]) assert.throws(() => new IntentGuardClient({ baseUrl, apiKey: "private-key" }));
+  for (const baseUrl of ["https://api.example", "http://127.0.0.1:8000", "http://localhost:8000", "http://[::1]:8000"]) assert.doesNotThrow(() => new IntentGuardClient({ baseUrl, apiKey: "local-token" }));
+});
+
+test("custom provider errors are never copied into guard logs", async () => {
+  const lines: unknown[][] = [];
+  const original = console.warn;
+  console.warn = (...values) => { lines.push(values); };
+  try {
+    const client: AurelToolGuardClient = { async evaluateAction() { throw new Error("Bearer synthetic-private-key"); }, async recordActionTelemetry() {} };
+    const guard = createAurelToolGuard({ integration: "langgraph", failMode: "open", telemetryEnabled: false }, client);
+    await guard.runProtected({ name: "read_file", arguments: {} }, () => "fixture");
+    assert.doesNotMatch(JSON.stringify(lines), /synthetic-private-key/);
+  } finally { console.warn = original; }
+});
 
 test("shared guard rejects invalid protocol responses even with fail-open explicitly enabled", async () => {
   for (const response of [{ decision: "allow", riskScore: NaN }, { decision: "allow", riskScore: true },

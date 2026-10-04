@@ -204,10 +204,11 @@ export class TelemetryOutbox {
           handle = null;
           await unlink(lockPath).catch(() => {});
         }
-        if (error.code !== "EEXIST") throw error;
+        const contended = error.code === "EEXIST" || (process.platform === "win32" && ["EPERM", "EACCES"].includes(error.code));
+        if (!contended) throw error;
         if (await this.#isStaleQueueLock(lockPath)) await unlink(lockPath).catch(() => {});
-        else if (Date.now() >= deadline) throw new Error("Telemetry queue is busy; event was not persisted");
-        else await new Promise((resolveDelay) => setTimeout(resolveDelay, 10 + Math.floor(Math.random() * 20)));
+        if (Date.now() >= deadline) throw new Error("Telemetry queue is busy; event was not persisted");
+        await new Promise((resolveDelay) => setTimeout(resolveDelay, 10 + Math.floor(Math.random() * 20)));
       }
     }
     try {
@@ -236,8 +237,9 @@ export class TelemetryOutbox {
         }
       }
       return Date.now() - info.mtimeMs > 30_000;
-    } catch (error) {
-      return error.code === "ENOENT";
+    } catch {
+      // A missing lock may already have been replaced by another writer.
+      return false;
     }
   }
 }

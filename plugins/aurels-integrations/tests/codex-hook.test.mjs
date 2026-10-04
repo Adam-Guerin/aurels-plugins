@@ -52,6 +52,24 @@ test("Codex rejects malformed allow metadata and unsupported decisions even in f
   });
 });
 
+test("Codex refuses insecure endpoint configuration even in fail-open mode", async () => {
+  for (const apiUrl of ["http://127.0.0.2:1", "https://user:private-key@example.com"]) {
+    const result = await invoke(apiUrl, "allow", "read_file", "open");
+    assert.equal(JSON.parse(result.stdout).hookSpecificOutput.permissionDecision, "deny");
+  }
+});
+
+test("Codex does not persist correlation when telemetry is disabled", async () => {
+  const directory = await mkdtemp(resolve(tmpdir(), "aurels-no-codex-telemetry-"));
+  try {
+    await withServer((req, res) => res.end('{"decision":"allow"}'), async (apiUrl) => {
+      const result = await runHook(apiUrl, { hook_event_name: "PreToolUse", tool_name: "read_file", tool_use_id: "no-storage", tool_input: {} }, "closed", directory, { AUREL_TELEMETRY_ENABLED: "false" });
+      assert.equal(JSON.parse(result.stdout).hookSpecificOutput.permissionDecision, "allow");
+      assert.deepEqual(await readdir(directory), []);
+    });
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
 test("Codex PreToolUse allows only an explicit allow response", async () => {
   let responseDecision = "allow";
   await withServer((req, res) => {
@@ -288,7 +306,7 @@ test("portable Codex and Claude plugin manifests point at packaged hooks", async
   const codexManifest = JSON.parse(await readFile(resolve(codexRoot, "plugin.json"), "utf8"));
   const codexHooks = JSON.parse(await readFile(resolve(codexRoot, "hooks/hooks.json"), "utf8"));
   assert.equal(codexManifest.extensions["com.openai"].hooks, "./hooks/hooks.json");
-  assert.equal(codexHooks.hooks.PreToolUse[0].hooks[0].command.includes("${PLUGIN_ROOT}"), true);
+  assert.equal(codexHooks.hooks.PreToolUse[0].hooks[0].command.includes("PLUGIN_ROOT"), true);
 
   const claudeRoot = resolve(import.meta.dirname, "../integrations/claude-code");
   const claudeManifest = JSON.parse(await readFile(resolve(claudeRoot, ".claude-plugin/plugin.json"), "utf8"));

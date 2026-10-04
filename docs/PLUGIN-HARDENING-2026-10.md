@@ -37,13 +37,15 @@ Use Node.js 22+ and Python 3.11+. Install the pinned host runtimes into separate
 ```bash
 npm ci --prefix plugins/aurels-integrations
 npm install --prefix .ci/openclaw --no-save --ignore-scripts openclaw@2026.3.28
+npm install --prefix .ci/codex --no-save --ignore-scripts @openai/codex@0.160.0
 python -m venv .ci/crewai-host
 .ci/crewai-host/bin/python -m pip install crewai==1.15.23
 # Provide a separately installed Hermes checkout/runtime to the variables below.
 OPENCLAW_PACKAGE_ROOT="$PWD/.ci/openclaw/node_modules/openclaw" \
 HERMES_SOURCE_DIR="/path/to/hermes-agent" \
 HERMES_PYTHON="/path/to/hermes-venv/bin/python" \
-CREWAI_PYTHON="$PWD/.ci/crewai-host/bin/python" npm test
+CREWAI_PYTHON="$PWD/.ci/crewai-host/bin/python" \
+AURELS_CODEX_CLI="$PWD/.ci/codex/node_modules/@openai/codex/bin/codex.js" npm test
 npm audit --audit-level=high --prefix plugins/aurels-integrations
 ```
 
@@ -58,6 +60,18 @@ The extended full suite passed 326 reported tests. One additional regression for
 End-to-end default HTTP clients also exposed an unset `action.type` being serialized as `undefined` in the shared TypeScript guard. Omitting that optional field restores evaluation for tools without an explicit type; fake-client tests had not exercised this serialization path. OpenClaw and Hermes now permit plain HTTP strictly on loopback for this service, retaining HTTPS for remote endpoints. Dependency auditing still reports zero vulnerabilities.
 
 ## Deployment constraints
+
+### October 4 verification follow-up
+
+- Shared TypeScript evaluation receives an independent strict JSON snapshot; provider-side mutation cannot alter executed arguments. Injected clients cannot bypass argument validation. Error logs omit provider payloads.
+- All maintained adapters require HTTPS for remote evaluation; HTTP is limited to explicit loopback addresses. Invalid endpoint configuration remains a refusal even when outage fail-open is enabled.
+- Claude/Codex skip new correlation files when telemetry is disabled. Claude malformed-input and MCP host/upstream parse diagnostics do not echo input snippets.
+- A real Windows Codex session exposed shell expansion of `${PLUGIN_ROOT}` as a bypass: PowerShell could not locate the hook and the host continued. Resolving the path inside Node fixes that command. Four dispatch scenarios now pass on both the desktop binary and the separately installed official Codex 0.160.0 package. CI adds Linux/Windows lanes against extracted archives; interactive trust prompts are not tested.
+- `aurels-evaluator verify` tests actual inference separately from health checks and fails when a model is unavailable or unsafe. Five synthetic cases passed with installed Ollama 0.24.0 / `qwen2.5:7b`; no tools or example file paths were executed. A real response with confidence `100` exposed underspecified chat instructions; explicit 0–1 instructions and Ollama's 128-token generation cap fixed this while strict response validation remains intact.
+- A 64-request HTTP burst proves the configured provider concurrency cap, safe overload refusal and recovery. It is not a capacity benchmark. Jev credentials and live Laya remain unavailable in this environment.
+- The full suite exposed a Windows sharing violation during independent-process audit writes. OpenClaw now retries that contention within its deadline, does not delete a lock after an unobserved/missing file, and stops retrying when a stale lock cannot be deleted. Three deterministic regressions reproduced those failures before the fix; the Node/Python cross-process cap test then passed four consecutive runs. CrewAI also rejects missing hosts and invalid ports before fail-open can apply.
+
+This follow-up supersedes the earlier statements that Codex CLI dispatch and all local inference were unverified. The final October 4 root `npm test` passed **352 reported tests**, plus the native Hermes/CrewAI scenarios and nested installed-package checks. The nine archives were rebuilt, installed/extracted, and checked; installed evaluator verification and extracted Codex native-session dispatch passed again. Locked npm dependency auditing reported zero vulnerabilities. Workflow YAML parsed and the final diff passed whitespace checks. Remote GitHub Actions is configured but is not included in these local results.
 
 This pass improves correctness at the tested boundaries. It does not make every integration universally production-ready:
 

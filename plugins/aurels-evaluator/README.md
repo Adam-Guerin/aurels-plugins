@@ -54,6 +54,18 @@ In another terminal, initialize the Laya profile and start the evaluator. The La
 
 Leave the evaluator process running. `aurels-evaluator check` verifies service availability only; it does not load a model or test inference. Warm local models before starting protected work; their initial loading time may exceed the configured deadline.
 
+Before connecting an agent, verify actual inference with your selected model and policy:
+
+```sh
+npx --no-install aurels-evaluator verify
+# For a separate profile:
+npx --no-install aurels-evaluator verify --config PATH/config.json
+```
+
+This sends five synthetic evaluation requests: an authorized read, credential extraction, destruction, malicious embedded instructions, and an unauthorized write. It executes no tools and accesses no example files. The JSON report contains decisions and latency, without credentials or full action payloads. A failed check exits with status 1. A gateway refusal caused by unavailable inference does not count as a passing security check. Run this after changing the provider, model, or policy; a green smoke test is still only a small acceptance sample.
+
+On October 4, 2026, the five checks passed against locally installed Ollama 0.24.0 with `qwen2.5:7b`. Warm inference took roughly 0.6–0.8 seconds per check. This result does not validate Jev, Laya, another model, or another deployment. The service now explicitly asks chat models for confidence in the range 0–1 and caps Ollama generation at 128 tokens; percentages remain invalid responses.
+
 ## Connect the plugins
 
 In the terminal that launches your agent or plugin host, load the generated environment file. This gives the host the local access token, not your provider key.
@@ -83,7 +95,7 @@ The file sets both `AURELS_API_URL` / `AUREL_API_URL` and `AURELS_API_KEY` / `AU
 
 This works with OpenClaw, Hermes, CrewAI, LangGraph, OpenAI Agents, the MCP proxy, Claude Code command hooks, and Codex Guard command hooks. A plugin's explicit configuration takes precedence over environment variables: replace any saved cloud `apiUrl`/`apiKey` with the local URL/token as well. In LangGraph or OpenAI Agents code, pass those values to the wrapper configuration. Protect every tool through the relevant adapter as described in its own README.
 
-The existing host contracts still apply. OpenClaw retains one-shot approval with frozen arguments. Native Hermes refuses a remote allow unless hook ordering is explicitly trusted, and cannot pause for approval; application-owned `run_protected` supports synchronous protected dispatch. Codex Guard denies review-required calls. Claude Code and Codex full interactive sessions remain outside the automated coverage.
+The existing host contracts still apply. OpenClaw retains one-shot approval with frozen arguments. Native Hermes refuses a remote allow unless hook ordering is explicitly trusted, and cannot pause for approval; application-owned `run_protected` supports synchronous protected dispatch. Codex Guard denies review-required calls. A real Codex 0.160.0 CLI session is tested with synthetic model/policy servers and actual file dispatch; interactive hook-trust prompts and full Claude Code sessions remain outside the automated coverage.
 
 ## Policy and operational limits
 

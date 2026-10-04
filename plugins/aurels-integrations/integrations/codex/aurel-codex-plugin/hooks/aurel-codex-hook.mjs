@@ -114,9 +114,11 @@ async function telemetry(action, decision, status) {
 async function aurelPost(path, payload) {
   const apiKey = process.env.AURELS_API_KEY ?? process.env.AUREL_API_KEY;
   if (!apiKey) throw new Error("Aurels API key is not configured");
-  const base = new URL(process.env.AURELS_API_URL ?? process.env.AUREL_API_URL ?? "https://www.aurels.dev");
-  if (!(["https:", "http:"].includes(base.protocol)) || base.username || base.password) throw new Error("Invalid Aurels API URL");
-  if (base.protocol !== "https:" && !["localhost", "127.0.0.1", "::1"].includes(base.hostname)) throw new Error("HTTPS required");
+  let base;
+  try { base = new URL(process.env.AURELS_API_URL ?? process.env.AUREL_API_URL ?? "https://www.aurels.dev"); } catch { throw new AurelProtocolError("Invalid evaluator endpoint"); }
+  const localHttp = base.protocol === "http:" && ["127.0.0.1", "localhost", "[::1]"].includes(base.hostname);
+  if ((base.protocol !== "https:" && !localHttp) || base.username || base.password) throw new AurelProtocolError("Evaluator endpoint requires HTTPS or loopback HTTP without credentials");
+  base.search = ""; base.hash = "";
   const timeout = Math.min(30_000, Math.max(100, Number(process.env.AUREL_TIMEOUT_MS ?? 1500)));
   const response = await fetch(`${base.toString().replace(/\/+$/, "")}${path}`, {
     method: "POST", redirect: "error", signal: AbortSignal.timeout(timeout),
@@ -200,6 +202,7 @@ function redact(value, depth = 0) {
 }
 function statePath(id) { return join(process.env.AUREL_STATE_DIR || join(tmpdir(), "aurels-codex"), `${createHash("sha256").update(id).digest("hex")}.json`); }
 async function saveState(action, decision, preflightLatencyMs) {
+  if (!envBool("AUREL_TELEMETRY_ENABLED", true)) return;
   if (!action.action.id) return;
   const file = statePath(action.action.id);
   const directory = dirname(file);

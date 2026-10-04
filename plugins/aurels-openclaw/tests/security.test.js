@@ -4,6 +4,8 @@ import { createServer } from "node:http";
 import { once } from "node:events";
 import { mkdtemp, readFile, readdir, rm, utimes, writeFile } from "node:fs/promises";
 import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import fsPromises from "node:fs/promises";
+import { syncBuiltinESMExports } from "node:module";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { AurelsRateLimitError, createClient, createHandlers, loadConfig, redact } from "../src/security.js";
@@ -99,6 +101,83 @@ test("durable telemetry does not remove a replacement lock after a stale PID rac
     assert.equal(await readFile(lockPath, "utf8"), String(process.pid));
   } finally {
     process.kill = originalKill;
+    await rm(spoolDir, { recursive: true, force: true });
+  }
+});
+
+test("durable telemetry waits for a Windows sharing violation before persisting", { skip: process.platform !== "win32" }, async () => {
+  const spoolDir = await mkdtemp(join(tmpdir(), "aurels-openclaw-sharing-"));
+  const lockPath = join(spoolDir, ".enqueue.lock");
+  const originalOpen = fsPromises.open;
+  await writeFile(lockPath, String(process.pid), "utf8");
+  let injected = false;
+  fsPromises.open = async (...args) => {
+    if (args[0] === lockPath && !injected) {
+      injected = true;
+      throw Object.assign(new Error("Windows sharing violation"), { code: "EPERM" });
+    }
+    return originalOpen(...args);
+  };
+  syncBuiltinESMExports();
+  const release = setTimeout(() => { unlinkSync(lockPath); }, 100);
+  try {
+    const event = { actionId: "after-sharing-violation" };
+    const path = await new TelemetryOutbox(spoolDir).enqueue(event);
+    assert.equal(injected, true);
+    assert.deepEqual(JSON.parse(await readFile(path, "utf8")), event);
+  } finally {
+    clearTimeout(release);
+    fsPromises.open = originalOpen; syncBuiltinESMExports();
+    await rm(spoolDir, { recursive: true, force: true });
+  }
+});
+
+test("durable telemetry does not unlink a replacement after a missing-lock observation", async () => {
+  const spoolDir = await mkdtemp(join(tmpdir(), "aurels-openclaw-missing-lock-"));
+  const lockPath = join(spoolDir, ".enqueue.lock");
+  const originalStat = fsPromises.lstat;
+  await writeFile(lockPath, "old owner", "utf8");
+  let replaced = false;
+  fsPromises.lstat = async (...args) => {
+    if (args[0] === lockPath && !replaced) {
+      replaced = true;
+      unlinkSync(lockPath); writeFileSync(lockPath, String(process.pid), "utf8");
+      throw Object.assign(new Error("Previous lock disappeared during inspection"), { code: "ENOENT" });
+    }
+    return originalStat(...args);
+  };
+  syncBuiltinESMExports();
+  try {
+    await assert.rejects(new TelemetryOutbox(spoolDir).enqueue({ actionId: "must-not-steal-replacement" }), /Telemetry queue is busy/);
+    assert.equal(await readFile(lockPath, "utf8"), String(process.pid));
+  } finally {
+    fsPromises.lstat = originalStat; syncBuiltinESMExports();
+    await rm(spoolDir, { recursive: true, force: true });
+  }
+});
+
+test("durable telemetry bounds retries when a stale lock cannot be removed", async () => {
+  const spoolDir = await mkdtemp(join(tmpdir(), "aurels-openclaw-locked-stale-"));
+  const lockPath = join(spoolDir, ".enqueue.lock");
+  const originalUnlink = fsPromises.unlink;
+  await writeFile(lockPath, "", "utf8");
+  const old = new Date(Date.now() - 60_000); await utimes(lockPath, old, old);
+  fsPromises.unlink = async (...args) => {
+    if (args[0] === lockPath) throw Object.assign(new Error("Lock deletion unavailable"), { code: "EPERM" });
+    return originalUnlink(...args);
+  };
+  syncBuiltinESMExports();
+  const pending = new TelemetryOutbox(spoolDir).enqueue({ actionId: "bounded-lock-failure" });
+  let timer;
+  try {
+    const outcome = await Promise.race([pending.then(() => "persisted", (error) => error.message),
+      new Promise((done) => { timer = setTimeout(() => done("retry deadline exceeded"), 1500); })]);
+    assert.match(outcome, /Telemetry queue is busy/);
+    assert.deepEqual((await readdir(spoolDir)).filter((name) => name.endsWith(".json")), []);
+  } finally {
+    clearTimeout(timer);
+    fsPromises.unlink = originalUnlink; syncBuiltinESMExports();
+    await pending.catch(() => {});
     await rm(spoolDir, { recursive: true, force: true });
   }
 });

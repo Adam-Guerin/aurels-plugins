@@ -71,8 +71,11 @@ class AurelCrewAIGuard:
     def __init__(self, config: AurelCrewAIConfig | None = None):
         self.config = config or AurelCrewAIConfig()
         parsed = urllib.parse.urlparse(self.config.api_url)
-        if parsed.scheme not in {"http", "https"} or parsed.username or parsed.password:
-            raise ValueError("Aurel API URL must be http(s) and must not contain credentials")
+        if not parsed.hostname or (parsed.port is not None and parsed.port == 0):
+            raise ValueError("Aurel API URL must contain a valid host and port")
+        loopback_http = parsed.scheme == "http" and parsed.hostname in {"127.0.0.1", "localhost", "::1"}
+        if (parsed.scheme != "https" and not loopback_http) or parsed.username or parsed.password:
+            raise ValueError("Aurel API URL requires HTTPS or loopback HTTP without credentials")
 
     def run_protected(
         self,

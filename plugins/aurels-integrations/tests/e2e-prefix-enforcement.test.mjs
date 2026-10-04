@@ -134,6 +134,57 @@ async function runMcpCall(apiUrl, name, args, envOverrides = {}) {
   }
 }
 
+test("Claude Code and MCP refuse insecure endpoint configuration even in fail-open mode", async () => {
+  for (const apiUrl of ["http://127.0.0.2:1", "https://user:private-key@example.com"]) {
+    const result = await runClaudeHook(apiUrl, { hook_event_name: "PreToolUse", tool_name: "read_file", tool_input: {} }, { AUREL_FAIL_MODE: "open", AUREL_TIMEOUT_MS: "100" });
+    assert.equal(result.hookSpecificOutput.permissionDecision, "deny");
+    const response = await runMcpCall(apiUrl, "read_file", {}, { AUREL_FAIL_MODE: "open", AUREL_TIMEOUT_MS: "100" });
+    assert.ok(response.error);
+  }
+});
+
+test("Claude malformed-input diagnostics do not disclose stdin content", async () => {
+  const child = spawn(process.execPath, [claudeHook], { env: testEnv("http://127.0.0.1:1") });
+  let stderr = "";
+  child.stderr.on("data", (chunk) => { stderr += chunk; });
+  const closed = once(child, "close");
+  child.stdin.end("secret123");
+  await closed;
+  assert.doesNotMatch(stderr, /secret123/);
+});
+
+test("MCP parser diagnostics never echo malformed host or upstream payloads", async () => {
+  for (const source of ["host", "upstream"]) {
+    const upstream = `process.stdin.resume();${source === "upstream" ? 'process.stdout.write("secret123\\n");' : ""}`;
+    const child = spawn(process.execPath, [mcpProxy, "--", process.execPath, "-e", upstream], {
+      env: testEnv("http://127.0.0.1:1", { AUREL_MCP_TRANSPORT: "newline" }),
+    });
+    let stderr = "";
+    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    const closed = once(child, "close");
+    const diagnostic = once(child.stderr, "data");
+    const deadline = setTimeout(() => child.kill(), 3000);
+    try {
+      if (source === "host") child.stdin.write("secret123\n");
+      await diagnostic;
+      child.stdin.end();
+      await closed;
+      assert.doesNotMatch(stderr, /secret123/);
+    } finally { clearTimeout(deadline); child.kill(); }
+  }
+});
+
+test("Claude does not persist correlation when telemetry is disabled", async () => {
+  const directory = await mkdtemp(resolve(tmpdir(), "aurels-no-telemetry-"));
+  try {
+    await withHarness(async (apiUrl) => {
+      const result = await runClaudeHook(apiUrl, { hook_event_name: "PreToolUse", tool_name: "read_file", tool_use_id: "no-storage", tool_input: { path: "public.txt" } }, { AUREL_STATE_DIR: directory, AUREL_TELEMETRY_ENABLED: "false" });
+      assert.equal(result.hookSpecificOutput.permissionDecision, "allow");
+      assert.deepEqual(await readdir(directory), []);
+    });
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
 test("Claude Code hook does not bypass Aurel for an aurel-prefixed tool name", async () => {
   await withHarness(async (apiUrl) => {
     const result = await runClaudeHook(apiUrl, {
@@ -310,7 +361,7 @@ test("Claude Code bounds and serializes on-disk correlations across concurrent h
       const calls = Array.from({ length: 8 }, (_, index) => runClaudeHook(apiUrl, {
         hook_event_name: "PreToolUse", session_id: "concurrent-session", tool_name: "Read",
         tool_use_id: `claude-parallel-${index}`, tool_input: { file_path: `safe-${index}.txt` },
-      }, { AUREL_STATE_DIR: stateDir }));
+      }, { AUREL_STATE_DIR: stateDir, AUREL_TELEMETRY_ENABLED: "true" }));
       const results = await Promise.all(calls);
       for (const result of results) assert.equal(result.hookSpecificOutput.permissionDecision, "allow");
       assert.equal(server.receivedRequests.filter((request) => request.path === "/api/v1/actions/evaluate").length, 8);
@@ -340,7 +391,7 @@ test("Claude Code recovers stale correlation locks after a crashed process", asy
       const result = await runClaudeHook(apiUrl, {
         hook_event_name: "PreToolUse", session_id: "recovery-session", tool_name: "Read",
         tool_use_id: callId, tool_input: { file_path: "safe.txt" },
-      }, { AUREL_STATE_DIR: stateDir });
+      }, { AUREL_STATE_DIR: stateDir, AUREL_TELEMETRY_ENABLED: "true" });
       assert.equal(result.hookSpecificOutput.permissionDecision, "allow");
     });
     const entries = await readdir(stateDir);

@@ -2,6 +2,7 @@ import {
   createAurelClient,
   AurelProtocolError,
   normalizeAurelDecision,
+  snapshotAurelActionRequest,
   type AurelActionRequest,
   type AurelActionTelemetry,
   type AurelSecurityDecision,
@@ -74,14 +75,15 @@ export function createAurelToolGuard(config: AurelToolGuardConfig, client?: Aure
       const started = now();
 
       if (!shouldIntercept(call.name, resolved)) {
-        const action = normalizeToolCall(call, resolved.integration, false);
+        const action = normalizeToolCall(call, resolved.integration);
         return { type: "allow", decision: { decision: "allow" }, action, preflightLatencyMs: elapsed(started), intercepted: false };
       }
 
-      const action = normalizeToolCall(call, resolved.integration);
+      let action = normalizeToolCall(call, resolved.integration);
       try {
+        action = snapshotAurelActionRequest(action);
         if (signal?.aborted) throw new AurelToolBlockedError(SANITIZED_UNAVAILABLE);
-        const decision = normalizeAurelDecision(await aurel.evaluateAction(action, signal));
+        const decision = normalizeAurelDecision(await aurel.evaluateAction(structuredClone(action), signal));
         if (signal?.aborted) throw new AurelToolBlockedError(SANITIZED_UNAVAILABLE);
         return mapDecision(decision, action, elapsed(started), resolved);
       } catch (error) {
@@ -89,7 +91,7 @@ export function createAurelToolGuard(config: AurelToolGuardConfig, client?: Aure
           || resolved.failMode === "closed" || shouldBlockFailOpenOutage(action, resolved)) {
           return { type: "block", message: SANITIZED_UNAVAILABLE, action, preflightLatencyMs: elapsed(started), intercepted: true };
         }
-        console.warn("[aurel] preflight failed in fail-open mode:", error instanceof Error ? error.message : error);
+        console.warn("[aurel] preflight unavailable; explicit fail-open fallback applied.");
         return { type: "allow", decision: { decision: "allow", reason: "Aurel fail-open fallback" }, action, preflightLatencyMs: elapsed(started), intercepted: true };
       }
     },
@@ -216,8 +218,8 @@ export function createAurelToolGuard(config: AurelToolGuardConfig, client?: Aure
 }
 
 function reportPostflight(promise: Promise<void>): void {
-  void promise.catch((error) => {
-    console.warn("[aurel] postflight telemetry failed:", error instanceof Error ? error.message : error);
+  void promise.catch(() => {
+    console.warn("[aurel] postflight telemetry unavailable.");
   });
 }
 
@@ -226,7 +228,7 @@ export function createDefaultAurelClient(config: AurelToolGuardConfig): IntentGu
   return createAurelClient({ apiKey: resolved.apiKey, baseUrl: resolved.apiUrl, timeoutMs: resolved.timeoutMs });
 }
 
-function normalizeToolCall(call: AurelToolCall, integration: string, snapshotArguments = true): AurelActionRequest {
+function normalizeToolCall(call: AurelToolCall, integration: string): AurelActionRequest {
   return {
     version: "1",
     integration,
@@ -234,7 +236,7 @@ function normalizeToolCall(call: AurelToolCall, integration: string, snapshotArg
       id: call.id ?? randomId(`${integration}-act`),
       name: call.name,
       ...(call.type === undefined ? {} : { type: call.type }),
-      arguments: snapshotArguments ? structuredClone(call.arguments) : call.arguments,
+      arguments: call.arguments,
     },
     agent: call.agent ?? {},
     requester: call.requester,

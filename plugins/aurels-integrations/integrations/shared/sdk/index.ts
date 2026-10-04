@@ -405,6 +405,10 @@ function stringifyAurelPayload(value: unknown): string {
   throw new AurelProtocolError("Aurels request payload exceeded maximum size", null);
 }
 
+export function snapshotAurelActionRequest(value: AurelActionRequest): AurelActionRequest {
+  return JSON.parse(stringifyExactAurelPayload(value)) as AurelActionRequest;
+}
+
 function stringifyExactAurelPayload(value: unknown): string {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new AurelProtocolError("Aurels action payload is not losslessly JSON-serializable", null);
@@ -624,8 +628,9 @@ async function retryTelemetry(fn: () => Promise<void>): Promise<void> {
 
 function normalizeBaseUrl(value: string): string {
   const url = new URL(value);
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new IntentGuardError("Aurels API URL must use http or https", 0, null);
+  const localHttp = url.protocol === "http:" && ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname);
+  if (url.protocol !== "https:" && !localHttp) {
+    throw new AurelProtocolError("Aurels API URL requires HTTPS or loopback HTTP", null);
   }
   if (url.username || url.password) {
     throw new IntentGuardError("Aurels API URL must not contain credentials", 0, null);

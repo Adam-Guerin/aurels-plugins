@@ -28,6 +28,8 @@ jobs:
         run: npm audit --audit-level=high --prefix plugins/aurels-integrations
       - name: Install OpenClaw runtime for hook-runner E2E
         run: npm install --prefix .ci/openclaw --no-save --ignore-scripts openclaw@2026.3.28
+      - name: Install Codex runtime for native-session E2E
+        run: npm install --prefix .ci/codex --no-save --ignore-scripts @openai/codex@0.160.0
       - name: Check out Hermes host runtime for native-dispatch E2E
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -47,6 +49,7 @@ jobs:
           HERMES_SOURCE_DIR: ${{ github.workspace }}/.ci/hermes-agent
           PYTHONPATH: ${{ github.workspace }}/.ci/hermes-agent
           CREWAI_PYTHON: ${{ github.workspace }}/.ci/crewai-host/bin/python
+          AURELS_CODEX_CLI: ${{ github.workspace }}/.ci/codex/node_modules/@openai/codex/bin/codex.js
         run: npm test
       - name: Build Python package
         working-directory: plugins/aurels-hermes

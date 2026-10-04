@@ -18,8 +18,8 @@ const MAX_AUREL_ARRAY_ITEMS = 512;
 const MAX_AUREL_OBJECT_KEYS = 512;
 class AurelProtocolError extends Error {}
 
-main().catch((error) => {
-  console.error(`[aurel-claude-code] hook failed before tool context was available: ${error instanceof Error ? error.message : String(error)}`);
+main().catch(() => {
+  console.error("[aurel-claude-code] hook input or evaluation unavailable.");
   deny(UNAVAILABLE_MESSAGE);
 });
 
@@ -458,6 +458,7 @@ function readStdin() {
 }
 
 async function rememberPreflight(actionId, state) {
+  if (!envBool("AUREL_TELEMETRY_ENABLED", true)) return;
   if (!state.traceId) return;
   try {
     const dir = stateDir();
@@ -673,9 +674,10 @@ function envBool(name, fallback) {
 }
 
 function normalizeApiUrl(value) {
-  const parsed = new URL(value);
-  if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("Aurel API URL must use http or https");
-  if (parsed.username || parsed.password) throw new Error("Aurel API URL must not contain credentials");
+  let parsed;
+  try { parsed = new URL(value); } catch { throw new AurelProtocolError("Invalid evaluator endpoint"); }
+  const localHttp = parsed.protocol === "http:" && ["127.0.0.1", "localhost", "[::1]"].includes(parsed.hostname);
+  if ((parsed.protocol !== "https:" && !localHttp) || parsed.username || parsed.password) throw new AurelProtocolError("Evaluator endpoint requires HTTPS or loopback HTTP without credentials");
   parsed.hash = "";
   parsed.search = "";
   return parsed.toString().replace(/\/+$/, "");

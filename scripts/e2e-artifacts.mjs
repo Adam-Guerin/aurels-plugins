@@ -114,7 +114,7 @@ export async function validateReleaseArtifacts(root) {
   await rm(codexUnpacked, { recursive: true, force: true });
 
   const evaluatorEntries = execFileSync("tar", ["-tzf", resolve(root, "dist/aurels-evaluator-0.1.0.tgz")], { encoding: "utf8" }).split(/\r?\n/).filter(Boolean);
-  for (const required of ["package/package.json", "package/README.md", "package/src/cli.mjs", "package/src/config.mjs", "package/src/model.mjs", "package/src/server.mjs"]) {
+  for (const required of ["package/package.json", "package/README.md", "package/src/cli.mjs", "package/src/config.mjs", "package/src/model.mjs", "package/src/server.mjs", "package/src/readiness.mjs"]) {
     if (!evaluatorEntries.includes(required)) throw new Error(`Evaluator archive is missing ${required}`);
   }
   if (evaluatorEntries.some((entry) => /(?:^|\/)(?:config\.json|plugin\.env|node_modules)(?:\/|$)/.test(entry))) throw new Error("Evaluator archive contains local configuration or dependencies.");

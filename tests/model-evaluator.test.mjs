@@ -77,6 +77,8 @@ test("Ollama receives a non-streaming chat request with a decision schema", asyn
       assert.equal(requests[0].body.model, "fixture-local-model");
       assert.equal(requests[0].body.stream, false);
       assert.equal(requests[0].body.format.type, "object");
+      assert.match(requests[0].body.messages[0].content, /confidence.*0.*1.*percentage/i);
+      assert.equal(requests[0].body.options.num_predict, 128);
       assert.deepEqual(JSON.parse(requests[0].body.messages[1].content).action, action.action);
     });
   });
@@ -262,6 +264,24 @@ test("pending evaluations are bounded and client disconnect aborts the provider 
       controller.abort();
       await rejection;
       await Promise.race([providerDisconnected, new Promise((_, reject) => setTimeout(() => reject(new Error("Provider was not cancelled")), 1000).unref())]);
+    });
+  });
+});
+
+test("a burst of 64 evaluations respects the provider concurrency cap and remains usable afterward", async () => {
+  let active = 0, peak = 0;
+  await upstream(async (_, res) => {
+    active++; peak = Math.max(peak, active);
+    await new Promise((done) => setTimeout(done, 100));
+    active--; res.end(JSON.stringify(choice()));
+  }, async (apiUrl) => {
+    await gateway(apiUrl, { maxConcurrent: 3, timeoutMs: 2000 }, async (url) => {
+      const results = await Promise.all(Array.from({ length: 64 }, (_, index) => evaluate(url, { ...action, action: { ...action.action, id: `burst-${index}` } })));
+      assert.ok(peak <= 3);
+      assert.ok(results.some((result) => result.body.decision === "allow"));
+      assert.ok(results.some((result) => result.body.category === "evaluator_busy"));
+      assert.ok(results.every((result) => result.status === 200 && ["allow", "block"].includes(result.body.decision)));
+      assert.equal((await evaluate(url)).body.decision, "allow");
     });
   });
 });

@@ -99,7 +99,7 @@ test("release artifacts expose every marketplace plugin and verify their hashes"
       assert.equal(mcp.bin['aurels-mcp-proxy'], 'src/aurel-mcp-proxy.mjs');
     `;
     execFileSync(process.execPath, ["--input-type=module", "-e", checkInstalledAdapters], { cwd: packageRoot, stdio: "inherit" });
-    const installedEvaluator = spawnSync(process.execPath, ["--test", "tests/model-evaluator.test.mjs", "tests/evaluator-cli.test.mjs"], {
+    const installedEvaluator = spawnSync(process.execPath, ["--test", "tests/model-evaluator.test.mjs", "tests/evaluator-cli.test.mjs", "tests/evaluator-readiness.test.mjs"], {
       cwd: root, env: { ...process.env,
         AURELS_EVALUATOR_MODULE: resolve(packageRoot, "node_modules/@aurels/evaluator/src/server.mjs"),
         AURELS_EVALUATOR_BIN: resolve(packageRoot, "node_modules/@aurels/evaluator/src/cli.mjs") },
@@ -122,6 +122,13 @@ test("release artifacts expose every marketplace plugin and verify their hashes"
       encoding: "utf8", timeout: 60_000,
     });
     if (hookE2e.status !== 0) throw new Error(`Packaged native-hook/MCP E2E failed:\n${hookE2e.stdout}\n${hookE2e.stderr}`);
+    if (process.env.AURELS_CODEX_CLI) {
+      const nativeCodex = spawnSync(process.execPath, ["--test", "tests/e2e-codex-session.test.mjs"], {
+        cwd: root, env: { ...process.env, AURELS_CODEX_HOOK_BIN: resolve(packagedCodex, "hooks/aurel-codex-hook.mjs") },
+        encoding: "utf8", timeout: 60_000,
+      });
+      if (nativeCodex.status !== 0) throw new Error(`Packaged Codex native-session failed:\n${nativeCodex.stdout}\n${nativeCodex.stderr}`);
+    }
     const nativeSdkTests = spawnSync(process.execPath, ["--import", "tsx", "--test", "tests/agent-runners.test.ts", "tests/mcp-sdk.test.mjs", "tests/evaluator-consumers.test.ts"], {
       cwd: resolve(root, "plugins/aurels-integrations"),
       env: { ...process.env, AUREL_MCP_PROXY_BIN: packagedMcpProxy,

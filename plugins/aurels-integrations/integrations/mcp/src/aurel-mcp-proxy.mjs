@@ -73,7 +73,7 @@ const stdinParser = createMcpParser((message) => {
   }).finally(() => evaluating.delete(id));
 }, {
   onError(error) {
-    console.error(`[aurel-mcp] invalid host message: ${error instanceof Error ? error.message : String(error)}`);
+    console.error("[aurel-mcp] invalid host message.");
     writeMcp(process.stdout, jsonRpcError(null, -32700, INVALID_MCP_MESSAGE));
   },
 });
@@ -121,7 +121,7 @@ const toolName = String(message.params?.name ?? "unknown");
   } catch (error) {
     if (signal.aborted) return;
     if (!(error instanceof ExactActionPayloadError) && (process.env.AUREL_FAIL_MODE ?? "closed") === "open" && !shouldBlockFailOpenOutage(toolName, message.params?.arguments)) {
-      console.error(`[aurel-mcp] fail-open: ${error instanceof Error ? error.message : String(error)}`);
+      console.error("[aurel-mcp] fail-open: evaluation unavailable.");
       setPending(message.id, { action, preflightLatencyMs: elapsed(started) });
       writeMcp(upstream.stdin, message);
       return;
@@ -186,7 +186,7 @@ const upstreamParser = createMcpParser(async (message) => {
   writeMcp(process.stdout, message);
 }, {
   onError(error) {
-    console.error(`[aurel-mcp] invalid upstream message: ${error instanceof Error ? error.message : String(error)}`);
+    console.error("[aurel-mcp] invalid upstream message.");
   },
 });
 
@@ -196,7 +196,7 @@ async function pump(stream, parser) {
   try {
     for await (const chunk of stream) await parser.push(chunk);
   } catch (error) {
-    console.error(`[aurel-mcp] stream failed: ${error instanceof Error ? error.message : String(error)}`);
+    console.error("[aurel-mcp] stream failed.");
   }
 }
 const upstreamPump = pump(upstream.stdout, upstreamParser);
@@ -251,7 +251,7 @@ async function sendOutcome(action, traceId, status, preflightLatencyMs, errorCat
       timestamp: new Date().toISOString(),
     }));
   } catch (error) {
-    console.error(`[aurel-mcp] telemetry failed: ${error instanceof Error ? error.message : String(error)}`);
+    console.error("[aurel-mcp] telemetry failed.");
   }
 }
 
@@ -753,9 +753,10 @@ function redactText(value, enabled) {
 }
 
 function normalizeApiUrl(value) {
-  const parsed = new URL(value);
-  if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("Aurel API URL must use http or https");
-  if (parsed.username || parsed.password) throw new Error("Aurel API URL must not contain credentials");
+  let parsed;
+  try { parsed = new URL(value); } catch { throw new AurelProtocolError("Invalid evaluator endpoint"); }
+  const localHttp = parsed.protocol === "http:" && ["127.0.0.1", "localhost", "[::1]"].includes(parsed.hostname);
+  if ((parsed.protocol !== "https:" && !localHttp) || parsed.username || parsed.password) throw new AurelProtocolError("Evaluator endpoint requires HTTPS or loopback HTTP without credentials");
   parsed.hash = "";
   parsed.search = "";
   return parsed.toString().replace(/\/+$/, "");

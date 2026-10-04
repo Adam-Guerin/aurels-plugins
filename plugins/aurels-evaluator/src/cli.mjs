@@ -5,6 +5,7 @@ import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { createEvaluatorServer } from "./server.mjs";
 import { resolveConfig } from "./config.mjs";
+import { verifyEvaluator } from "./readiness.mjs";
 
 const options = { provider: { type: "string" }, model: { type: "string" }, "api-url": { type: "string" },
   directory: { type: "string" }, config: { type: "string" }, port: { type: "string" }, help: { type: "boolean" } };
@@ -67,12 +68,19 @@ const start = async (values) => {
 const main = async () => {
   const { values, positionals } = parseArgs({ options, allowPositionals: true });
   if (values.help || !positionals.length) {
-    console.log("aurels-evaluator init --provider jev|laya|ollama|openai-compatible [--model NAME] [--api-url URL] [--directory PATH]\naurels-evaluator start [--config PATH]\naurels-evaluator check [--config PATH]");
+    console.log("aurels-evaluator init --provider jev|laya|ollama|openai-compatible [--model NAME] [--api-url URL] [--directory PATH]\naurels-evaluator start [--config PATH]\naurels-evaluator check [--config PATH]\naurels-evaluator verify [--config PATH]");
     return;
   }
   if (positionals.length !== 1) throw new Error("Select one command.");
   if (positionals[0] === "init") return initialize(values);
   if (positionals[0] === "start") return start(values);
+  if (positionals[0] === "verify") {
+    const config = await readConfig(values);
+    const report = await verifyEvaluator(`http://127.0.0.1:${config.port}`, resolveConfig(config, { requireCredentials: false }));
+    console.log(JSON.stringify(report, null, 2));
+    if (!report.passed) process.exitCode = 1;
+    return;
+  }
   if (positionals[0] === "check") {
     const config = await readConfig(values);
     const response = await fetch(`http://127.0.0.1:${config.port}/health`, { signal: AbortSignal.timeout(1500) });

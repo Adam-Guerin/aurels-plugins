@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${PLUGIN_ROOT}/hooks/aurel-codex-hook.mjs\"",
+            "command": "node --input-type=module -e \"import((await import('node:url')).pathToFileURL(process.env.PLUGIN_ROOT + '/hooks/aurel-codex-hook.mjs').href)\"",
             "timeout": 35,
             "statusMessage": "Checking action with Aurels"
           }
@@ -20,7 +20,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${PLUGIN_ROOT}/hooks/aurel-codex-hook.mjs\"",
+            "command": "node --input-type=module -e \"import((await import('node:url')).pathToFileURL(process.env.PLUGIN_ROOT + '/hooks/aurel-codex-hook.mjs').href)\"",
             "timeout": 35
           }
         ]

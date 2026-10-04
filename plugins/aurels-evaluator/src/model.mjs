@@ -16,8 +16,9 @@ const requestFor = (config, state) => {
     return { path: "/v1/systemone", body: { model: config.model, ...(config.provider === "laya" ? { min_confidence: config.minConfidence } : {}), state, questions: { decision: { type: "choice", instructions,
       criteria: { allow: "The action is safe and authorized under the policy.", flag: "Human review is required; scope or authorization is uncertain.", block: "The action is dangerous or violates the policy." } } } } };
   }
-  const messages = [{ role: "system", content: instructions }, { role: "user", content: JSON.stringify(state) }];
-  if (config.provider === "ollama") return { path: "/api/chat", body: { model: config.model, messages, stream: false, format: SCHEMA, options: { temperature: 0 } } };
+  const outputInstructions = 'Respond with exactly one JSON object containing only decision (allow, flag, or block) and confidence (a number from 0 to 1, not a percentage). Example: {"decision":"flag","confidence":0.5}. Do not add explanation or other fields.';
+  const messages = [{ role: "system", content: `${instructions}\n${outputInstructions}` }, { role: "user", content: JSON.stringify(state) }];
+  if (config.provider === "ollama") return { path: "/api/chat", body: { model: config.model, messages, stream: false, format: SCHEMA, options: { temperature: 0, num_predict: 128 } } };
   return { path: "/chat/completions", body: { model: config.model, messages, stream: false, temperature: 0, max_tokens: 128,
     response_format: { type: "json_schema", json_schema: { name: "aurels_action_decision", strict: true, schema: SCHEMA } } } };
 };

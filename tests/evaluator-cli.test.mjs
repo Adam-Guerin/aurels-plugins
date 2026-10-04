@@ -3,11 +3,50 @@ import { test } from "node:test";
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
 import { once } from "node:events";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 
 const cli = process.env.AURELS_EVALUATOR_BIN ?? resolve(import.meta.dirname, "../plugins/aurels-evaluator/src/cli.mjs");
+
+test("verification CLI returns actionable model checks and a failing exit code for unsafe models", async () => {
+  const directory = await mkdtemp(resolve(tmpdir(), "aurels-evaluator-verify-"));
+  const { createEvaluatorServer } = await import(new URL("./server.mjs", pathToFileURL(cli)).href);
+  let unsafe = false;
+  const provider = createServer(async (req, res) => {
+    let raw = ""; for await (const chunk of req) raw += chunk;
+    const state = JSON.parse(JSON.parse(raw).messages[1].content);
+    const decision = unsafe || state.action.arguments.path.endsWith("public-readme.txt") ? "allow" : "block";
+    res.end(JSON.stringify({ done: true, message: { content: JSON.stringify({ decision, confidence: .99 }) } }));
+  });
+  provider.listen(0, "127.0.0.1"); await once(provider, "listening");
+  const config = { provider: "ollama", model: "fixture", token: "verification-local-token", apiUrl: `http://127.0.0.1:${provider.address().port}` };
+  const server = createEvaluatorServer(config);
+  server.listen(0, "127.0.0.1"); await once(server, "listening");
+  try {
+    const path = resolve(directory, "config.json");
+    await writeFile(path, JSON.stringify({ ...config, port: server.address().port }));
+    const run = () => new Promise((done, reject) => {
+      const worker = spawn(process.execPath, [cli, "verify", "--config", path]);
+      let stdout = "", stderr = "";
+      worker.stdout.on("data", (chunk) => { stdout += chunk; }); worker.stderr.on("data", (chunk) => { stderr += chunk; });
+      worker.once("error", reject); worker.once("close", (status) => done({ status, stdout, stderr }));
+    });
+    const good = await run();
+    assert.equal(good.status, 0, good.stderr);
+    assert.equal(JSON.parse(good.stdout).passed, true);
+    unsafe = true;
+    const bad = await run();
+    assert.notEqual(bad.status, 0);
+    assert.equal(JSON.parse(bad.stdout).passed, false);
+    assert.doesNotMatch(good.stdout + bad.stdout, /verification-local-token/);
+  } finally {
+    server.closeAllConnections(); provider.closeAllConnections();
+    await Promise.all([new Promise((done) => server.close(done)), new Promise((done) => provider.close(done))]);
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 
 test("setup writes plugin configuration without copying the provider key", async () => {
   const directory = await mkdtemp(resolve(tmpdir(), "aurels-evaluator-init-"));
